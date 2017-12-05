@@ -22,7 +22,7 @@ socklen_t clilen;
 char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
 char recv_buff[MAXLINE], username[30], username_rec[30], password[30], password_rec[30], *conf_buffer, req_method[30];
 char fname1[30], fname2[30], root_dir[200];
-int f1_size, f2_size;
+int f1_size, f2_size, server_no;
 struct sockaddr_in cliaddr, servaddr;
 size_t max = 200;
 
@@ -42,8 +42,8 @@ void handle_request(int socketfd)
                         { 
                                 
                                 printf("\n\n");
-                                sscanf(fbuff1,"%s %s %d %s %d %s %s", req_method, fname1, &f1_size, fname2, &f2_size, username_rec, password_rec );
-                                //printf("\n %s %s %d %s %d %s %s \n", req_method, fname1, f1_size, fname2, f2_size, username_rec, password_rec );
+                                sscanf(fbuff1,"%s %s %d %s %d %s %s %d", req_method, fname1, &f1_size, fname2, &f2_size, username_rec, password_rec, &server_no );
+                                printf("\n %s %s %d %s %d %s %s %d\n", req_method, fname1, f1_size, fname2, f2_size, username_rec, password_rec, server_no );
                                 
                                 if( (strcmp(username, username_rec) == 0) && (strcmp(password, password_rec) == 0))
                                 {               
@@ -60,9 +60,25 @@ void handle_request(int socketfd)
                                         //printf("\n\n");
 
                                         char usr_dir[40];
-                                        sprintf(usr_dir, "./%s",username);
-                                        
+                                        if(server_no == 1)
+                                        {
+                                                sprintf(usr_dir, "./DFS1/%s",username);
+                                        }
+                                        else if(server_no == 2)
+                                        {
+                                                sprintf(usr_dir, "./DFS2/%s",username);
+                                        }
 
+                                        else if(server_no == 3)
+                                        {
+                                                sprintf(usr_dir, "./DFS3/%s",username);
+                                        }
+                                        else if(server_no == 4)
+                                        {
+                                                sprintf(usr_dir, "./DFS4/%s",username);
+                                        }
+                                        
+                                        strncpy(root_dir, usr_dir, strlen(usr_dir));
 
                                 /*** Checking if directory for a Username Already Exists, if not create one ***/
 
@@ -74,7 +90,7 @@ void handle_request(int socketfd)
 
                                         }
 
-                                        sprintf(usr_dir, "./%s/%s",username, fname1);
+                                        sprintf(usr_dir,"%s/%s",root_dir, fname1);
                                         FILE *fp1;
                                         fp1 = fopen(usr_dir, "wb");
                                         
@@ -94,6 +110,35 @@ void handle_request(int socketfd)
                                                 send(socketfd,"FILE NOT WRITTEN", 16, 0);
 
                                         }
+
+/********************************************************   WRITING 2ND FILE PART   ***********************************************************/
+
+                                        n = recv(socketfd, recv_buff, buff_max_size, 0);
+                                        strncpy(fbuff3, recv_buff, strlen(recv_buff));
+
+                                        sprintf(usr_dir,"%s/%s",root_dir, fname2);
+                                        FILE *fp2;
+                                        fp2 = fopen(usr_dir, "wb");
+                                        
+                                        if(fp2 != NULL)
+                                        {
+                                                //printf("\n\n buff size is %d\n", f1_size);
+                                                fwrite(fbuff3, f2_size, 1, fp2);
+
+                                                fclose(fp2);
+
+                                                send(socketfd, "ACK", 3, 0);
+                                        }
+
+                                        else
+                                        {
+                                                printf("Unable to write\n");
+                                                send(socketfd,"FILE NOT WRITTEN", 16, 0);
+
+                                        }
+
+
+                                        
                                 }
 
                                 else
@@ -136,10 +181,6 @@ int main (int argc, char **argv)
         }
 
         SERV_PORT = atoi(argv[1]);
-        
-        strncpy(root_dir, "/home/niharika/Desktop/PA3", strlen("/home/niharika/Desktop/PA3"));
-        printf("\n ROOT DIR : ");
-        puts(root_dir);
 
         FILE *conf = fopen("dfs.conf", "r");
         if(conf == NULL)

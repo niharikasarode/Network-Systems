@@ -38,23 +38,23 @@ void extract_ports(char *buff1, int i)
 }
 
 
-void sendto_server(int socketfd, char *filename, char *buf1, int suffix1, char *buf2, int suffix2, char *Username, char *Password, char *req_type)
+void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int suffix1, char *buf2, int suffix2, char *Username, char *Password, char *req_type)
 {
         int rec, len1 = strlen(buf1);
         int len2 = strlen(buf2);
         char fname1[30], fname2[30], rec_buff[90];
         bzero(rec_buff, sizeof(rec_buff));
 
-        sprintf(fname1, "%s", "buff1.txt");
-        //sprintf(fname2, ".%s.%d", filename, suffix2);
-        sprintf(send_buff,"%s %s %d %s %d %s %s ", req_type, fname1, len1, fname2, len2, Username, Password);
+        sprintf(fname1, ".%s.%d", filename, suffix1);
+        sprintf(fname2, ".%s.%d", filename, suffix2);
+        sprintf(send_buff,"%s %s %d %s %d %s %s %d ", req_type, fname1, len1, fname2, len2, Username, Password, server_no);
         //puts(send_buff);
         send(socketfd, send_buff, strlen(send_buff), 0);
         
 
 
         rec = recv(socketfd, rec_buff, 90, 0);
-        printf("\n\n Server says : ");
+        printf("\n\n After Command send,Server says : ");
         puts(rec_buff);
 
 
@@ -64,19 +64,19 @@ void sendto_server(int socketfd, char *filename, char *buf1, int suffix1, char *
 
                 bzero(rec_buff, sizeof(rec_buff));
                 rec = recv(socketfd, rec_buff, 90, 0);
-                printf("\n\n Server says : ");
+                printf("\n\n After sending 1st PART Server says : ");
                 puts(rec_buff);
 
-                /*if(strncmp(rec_buff, "ACK",3) == 0)
+                if(strncmp(rec_buff, "ACK",3) == 0)
                 {
                         bzero(rec_buff, sizeof(rec_buff));
                         
-                        send(socketfd, buf1, strlen(buf1), 0);
+                        send(socketfd, buf2, strlen(buf2), 0);
                         rec = recv(socketfd, rec_buff, 90, 0);
-                        printf("\n\n Server says : ");
+                        printf("\n\n After sending 2nd PART Server says : ");
                         puts(rec_buff);
 
-                }*/
+                }
 
         }
 
@@ -267,18 +267,18 @@ int main(int argc, char **argv)
                         {
                                 case 0:
                 
-                                        sendto_server(sockfd1, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
-                                        sendto_server(sockfd2, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
-                                        sendto_server(sockfd3, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
-                                        sendto_server(sockfd4, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
+                                        sendto_server(sockfd1, 1, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
+                                        sendto_server(sockfd2, 2, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
+                                        sendto_server(sockfd3, 3, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
+                                        sendto_server(sockfd4, 4, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
                                         break; 
 
                                 case 1:
 
-                                        sendto_server(sockfd1, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
-                                        //sendto_server(sockfd2, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
-                                        //sendto_server(sockfd3, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
-                                        //sendto_server(sockfd4, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
+                                        sendto_server(sockfd1, 1, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
+                                        sendto_server(sockfd2, 2, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
+                                        sendto_server(sockfd3, 3, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
+                                        sendto_server(sockfd4, 4, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
  
 
                                         break; 
@@ -286,20 +286,20 @@ int main(int argc, char **argv)
 
                                 case 2:
 
-                                        sendto_server(sockfd1, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
-                                        sendto_server(sockfd2, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
-                                        sendto_server(sockfd3, filename, fbuff1, 1, fbuff2, 2, username, password, req_method);
-                                        sendto_server(sockfd4, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
+                                        sendto_server(sockfd1, 1, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
+                                        sendto_server(sockfd2, 2, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
+                                        sendto_server(sockfd3, 3, filename, fbuff1, 1, fbuff2, 2, username, password, req_method);
+                                        sendto_server(sockfd4, 4, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
  
                                         break; 
 
 
                                 case 3:
 
-                                        sendto_server(sockfd1, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
-                                        sendto_server(sockfd2, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
-                                        sendto_server(sockfd3, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
-                                        sendto_server(sockfd4, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
+                                        sendto_server(sockfd1, 1, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
+                                        sendto_server(sockfd2, 2, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
+                                        sendto_server(sockfd3, 3, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
+                                        sendto_server(sockfd4, 4, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
 
                                         break; 
 
