@@ -48,13 +48,13 @@ int mod_from_md5(char *filename)
 }
 
 
-void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_prt3, char *file_prt4, int *arr, char *key )
+void file_divide(char *filename, char *file_prt1, char *file_prt2, int *arr )
 {
 
-        FILE *fp, *fen;
-        int len, chunk =0, rem = 0;
+        FILE *fp, *fen, *fs;
+        int len, chunk =0, rem = 0, a, b, c, d, rem_new=0;
         char cmd[60], fbuff[99999], encrypted[99999], decrypted[99999];
-        int len2 = strlen(key);
+        //int len2 = strlen(key);
 
         fp = fopen(filename, "rb");
         if( fp != NULL)
@@ -88,19 +88,7 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
                 exit(1);
         }
 
-        fp = fopen(filename, "rb");
-        if( fp != NULL)
-        {
-                fseek(fp, 0, SEEK_SET);
-                fread(fbuff, sizeof(char), len, fp);
-                fclose(fp);
-        }
-        else
-        {
-                printf("Error opening file");
-                exit(1);
-        }
-
+        
         /************************************ File read, encrypted n written in another **************************************************/
 
         /*for(int i=0; i <len; i++)
@@ -134,91 +122,287 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
 
                 bzero(file_prt1, sizeof(file_prt1));
                 bzero(file_prt2, sizeof(file_prt2));
-                bzero(file_prt3, sizeof(file_prt3));
-                bzero(file_prt4, sizeof(file_prt4));
+                
 
-                arr[0] = fread(file_prt1, sizeof(char), chunk, fp);
-                if(arr[0] < 0)
+                if(chunk > 90000)
                 {
-                        printf("File not read");
-                        exit(1);
-                }
+                        int f=1, div = chunk/90000;
+                        int mod_ch = chunk%90000;
 
-                for(int i=0; i <chunk; i++)
-                {
-                        file_prt1[i] = file_prt1[i]^key[i%(len2)];
+                        if((a < 0) || (b<0))
+                        {
+                                printf("File not read");
+                                exit(1);
+                        }
+                        fs = fopen("f1","wb");
+                        if(fs != NULL)
+                        {
+                        fseek(fs, 0, SEEK_SET);
+                        
+                        while(f<=div)
+                        {
+                        a = fread(file_prt1, sizeof(char), 90000, fp);
+                        fwrite(file_prt1, 90000, 1, fs);
+                        memset(file_prt1, 0, sizeof(file_prt1));
+                        f++;
+                        }
+                        
+                        b = fread(file_prt2, sizeof(char), mod_ch, fp);
+                        fseek(fs, 0, SEEK_SET);
+                        fseek(fs, (div*90000) , SEEK_SET);
+                        fwrite(file_prt2,mod_ch, 1, fs );
+                        memset(file_prt2, 0, sizeof(file_prt2));
+                        arr[0] = (div*90000)+b;
+                        }
+
                 }
+                else
+                {
+                        arr[0] = fread(file_prt1, sizeof(char), chunk, fp);
+                        if(arr[0] < 0)
+                        {
+                                printf("File not read");
+                                exit(1);
+                        }
+                        fs = fopen("f1","wb");
+                        if(fs != NULL)
+                        {
+                        fseek(fs, 0, SEEK_SET);
+                        fwrite(file_prt1, chunk, 1, fs);
+                        memset(file_prt1, 0, sizeof(file_prt1));
+                        }
+                
+                }
+                fclose(fs);
 
                 /***** 2 ****/
-
+                bzero(file_prt1, sizeof(file_prt1));
+                bzero(file_prt2, sizeof(file_prt2));
                 fseek(fp, 0, SEEK_SET);
                 fseek(fp, chunk, SEEK_SET);
 
-                arr[1] = fread(file_prt2, sizeof(char), chunk, fp);
-                if(arr[1] < 0)
+                if(chunk > 90000)
                 {
-                        printf("File not read");
-                        exit(1);
+                        int f=1, div = chunk/90000;
+                        int mod_ch = chunk%90000;
+
+                        if((a < 0) || (b<0))
+                        {
+                                printf("File not read");
+                                exit(1);
+                        }
+                        fs = fopen("f2","wb");
+                        if(fs != NULL)
+                        {
+                        fseek(fs, 0, SEEK_SET);
+                        
+                        while(f<=div)
+                        {
+                        a = fread(file_prt1, sizeof(char), 90000, fp);
+                        fwrite(file_prt1, 90000, 1, fs);
+                        memset(file_prt1, 0, sizeof(file_prt1));
+                        f++;
+                        }
+                        
+                        b = fread(file_prt2, sizeof(char), mod_ch, fp);
+                        fseek(fs, 0, SEEK_SET);
+                        fseek(fs, (div*90000) , SEEK_SET);
+                        fwrite(file_prt2,mod_ch, 1, fs );
+                        memset(file_prt2, 0, sizeof(file_prt2));
+                        arr[1] = (div*90000)+b;
+                        }
                 }
-                for(int i=0; i <chunk; i++)
+                else
                 {
-                        file_prt2[i] = file_prt2[i]^key[i%(len2)];
+                        arr[1] = fread(file_prt1, sizeof(char), chunk, fp);
+                        if(arr[1] < 0)
+                        {
+                                printf("File not read");
+                                exit(1);
+                        }
+                        fs = fopen("f2","wb");
+                        if(fs != NULL)
+                        {
+                        fseek(fs, 0, SEEK_SET);
+                        fwrite(file_prt1, chunk, 1, fs);
+                        memset(file_prt1, 0, sizeof(file_prt1));
+                        }
+                
                 }
 
+                fclose(fs);
                 /**** 3 *****/
-
+                bzero(file_prt1, sizeof(file_prt1));
+                bzero(file_prt2, sizeof(file_prt2));
                 fseek(fp, 0, SEEK_SET);
                 fseek(fp, (2*chunk), SEEK_SET);
 
-                arr[2] = fread(file_prt3, sizeof(char), chunk, fp);
-                if(arr[2] < 0)
+                 if(chunk > 90000)
                 {
-                        printf("File not read");
-                        exit(1);
+                        int f=1, div = chunk/90000;
+                        int mod_ch = chunk%90000;
+
+                        if((a < 0) || (b<0))
+                        {
+                                printf("File not read");
+                                exit(1);
+                        }
+                        fs = fopen("f3","wb");
+                        if(fs != NULL)
+                        {
+                        fseek(fs, 0, SEEK_SET);
+                        
+                        while(f<=div)
+                        {
+                        a = fread(file_prt1, sizeof(char), 90000, fp);
+                        fwrite(file_prt1, 90000, 1, fs);
+                        memset(file_prt1, 0, sizeof(file_prt1));
+                        f++;
+                        }
+                        
+                        b = fread(file_prt2, sizeof(char), mod_ch, fp);
+                        fseek(fs, 0, SEEK_SET);
+                        fseek(fs, (div*90000) , SEEK_SET);
+                        fwrite(file_prt2,mod_ch, 1, fs );
+                        memset(file_prt2, 0, sizeof(file_prt2));
+                        arr[2] = (div*90000)+b;
+                        }
                 }
-                for(int i=0; i <chunk; i++)
+                else
                 {
-                        file_prt3[i] = file_prt3[i]^key[i%(len2)];
+                        arr[2] = fread(file_prt1, sizeof(char), chunk, fp);
+                        if(arr[2] < 0)
+                        {
+                                printf("File not read");
+                                exit(1);
+                        }
+                        fs = fopen("f3","wb");
+                        if(fs != NULL)
+                        {
+                        fseek(fs, 0, SEEK_SET);
+                        fwrite(file_prt1, chunk, 1, fs);
+                        memset(file_prt1, 0, sizeof(file_prt1));
+                        }
+                
                 }
                
+                fclose(fs);
+
 
                 /***** 4 ****/
 
+                bzero(file_prt1, sizeof(file_prt1));
+                bzero(file_prt2, sizeof(file_prt2));
                 fseek(fp, 0, SEEK_SET);
                 fseek(fp, 3*chunk, SEEK_SET);
-                int b;
-                if(rem == 0)
+
+                 if((rem == 0) && (chunk > 90000))
                 {
-                        arr[3] = fread(file_prt4, sizeof(char), chunk, fp);
-                        for(int i=0; i <chunk; i++)
+                        int f=1, div = chunk/90000;
+                        int mod_ch = chunk%90000;
+
+                        if((a < 0) || (b<0))
                         {
-                                file_prt4[i] = file_prt4[i]^key[i%(len2)];
+                                printf("File not read");
+                                exit(1);
                         }
-                }                
-                else
-                {
-                        arr[3] = fread(file_prt4, sizeof(char), rem, fp);
-                        for(int i=0; i <chunk; i++)
+                        fs = fopen("f4","wb");
+                        if(fs != NULL)
                         {
-                                file_prt4[i] = file_prt4[i]^key[i%(len2)];
+                        fseek(fs, 0, SEEK_SET);
+                        
+                        while(f<=div)
+                        {
+                        a = fread(file_prt1, sizeof(char), 90000, fp);
+                        fwrite(file_prt1, 90000, 1, fs);
+                        memset(file_prt1, 0, sizeof(file_prt1));
+                        f++;
+                        }
+                        
+                        b = fread(file_prt2, sizeof(char), mod_ch, fp);
+                        fseek(fs, 0, SEEK_SET);
+                        fseek(fs, (div*90000) , SEEK_SET);
+                        fwrite(file_prt2,mod_ch, 1, fs );
+                        memset(file_prt2, 0, sizeof(file_prt2));
+                        arr[3] = (div*90000)+b;
                         }
                 }
 
-                if(arr[3] < 0)
+                else if((rem != 0) && (rem > 90000))
                 {
-                        printf("File not read");
-                        exit(1);
+                        int f=1, div = rem/90000;
+                        int mod_ch = rem%90000;
+
+                        if((a < 0) || (b<0))
+                        {
+                                printf("File not read");
+                                exit(1);
+                        }
+                        fs = fopen("f4","wb");
+                        if(fs != NULL)
+                        {
+                        fseek(fs, 0, SEEK_SET);
+                        
+                        while(f<=div)
+                        {
+                        a = fread(file_prt1, sizeof(char), 90000, fp);
+                        fwrite(file_prt1, 90000, 1, fs);
+                        memset(file_prt1, 0, sizeof(file_prt1));
+                        f++;
+                        }
+                        
+                        b = fread(file_prt2, sizeof(char), mod_ch, fp);
+                        fseek(fs, 0, SEEK_SET);
+                        fseek(fs, (div*90000) , SEEK_SET);
+                        fwrite(file_prt2,mod_ch, 1, fs );
+                        memset(file_prt2, 0, sizeof(file_prt2));
+                        arr[3] = (div*90000)+b;
+                        }
+                }
+
+                else if( (rem ==0 ) && (chunk <= 90000) )
+                {
+                        arr[3] = fread(file_prt1, sizeof(char), chunk, fp);
+                        if(arr[3] < 0)
+                        {
+                                printf("File not read");
+                                exit(1);
+                        }
+                        fs = fopen("f4","wb");
+                        if(fs != NULL)
+                        {
+                        fseek(fs, 0, SEEK_SET);
+                        fwrite(file_prt1, chunk, 1, fs);
+                        memset(file_prt1, 0, sizeof(file_prt1));
+                        }
+                
                 }
 
 
-                 fclose(fp);
-
-                for(int p = 0; p<4; p++)
+                else if( (rem !=0 ) && (rem <= 90000) )
                 {
-                        printf("%d\n", arr[p]);
+                        arr[3] = fread(file_prt1, sizeof(char), rem, fp);
+                        if(arr[3] < 0)
+                        {
+                                printf("File not read");
+                                exit(1);
+                        }
+                        fs = fopen("f4","wb");
+                        if(fs != NULL)
+                        {
+                        fseek(fs, 0, SEEK_SET);
+                        fwrite(file_prt1, rem, 1, fs);
+                        memset(file_prt1, 0, sizeof(file_prt1));
+                        }
+                
                 }
+                fclose(fs);
 
-
+                printf("\n\nSizes recorded:\n");
+                for(int nk =0; nk < 4; nk++)
+                {
+                        printf("%d\n", arr[nk]);
+                }
 
                 /*sprintf(cmd, "split -b %d -d -a 1 %s", chunk_size, filename );
                 system(cmd);
