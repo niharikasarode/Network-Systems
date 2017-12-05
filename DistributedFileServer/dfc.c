@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <openssl/md5.h>
-//#include "md5_cal.h"
+#include "md5_cal.h"
 
 #define MAXLINE 400 /*max text line length*/
 #define SERV_PORT 3000
@@ -16,6 +16,7 @@
 
 FILE *conf;
 char dfc_conf[30], *conf_buffer, username[20], password[20], cmd[60];
+char filename[30];
 int port[4];
 int sockfd1, sockfd2, sockfd3, sockfd4 ;
 struct sockaddr_in servaddr;
@@ -187,6 +188,21 @@ int main(int argc, char **argv)
 
         fgets(cmd, MAXLINE, stdin);
         puts(cmd);
+
+        if( (strncmp(cmd, "PUT", 3) == 0) || (strncmp(cmd, "put", 3) == 0))
+        {
+                char *tok2;
+                tok2 = strtok(cmd, " ");
+                puts(tok2);
+                tok2 = strtok(NULL, " \t\n");
+                puts(tok2);
+                strncpy(filename, tok2, strlen(tok2));
+                puts(filename);
+
+                int mod = mod_from_md5(filename);
+                printf("mod : %d\n", mod);
+                
+        }
 
 
 
