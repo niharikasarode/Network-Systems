@@ -48,12 +48,13 @@ int mod_from_md5(char *filename)
 }
 
 
-void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_prt3, char *file_prt4, int *arr )
+void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_prt3, char *file_prt4, int *arr, char *key )
 {
 
-        FILE *fp;
+        FILE *fp, *fen;
         int len, chunk =0, rem = 0;
-        char cmd[60];
+        char cmd[60], fbuff[99999], encrypted[99999], decrypted[99999];
+        int len2 = strlen(key);
 
         fp = fopen(filename, "rb");
         if( fp != NULL)
@@ -78,6 +79,7 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
                         chunk = len/4;
                         rem = 0;
                 }
+                fclose(fp);
         }
 
         else
@@ -86,9 +88,40 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
                 exit(1);
         }
 
-        
-
         fp = fopen(filename, "rb");
+        if( fp != NULL)
+        {
+                fseek(fp, 0, SEEK_SET);
+                fread(fbuff, sizeof(char), len, fp);
+                fclose(fp);
+        }
+        else
+        {
+                printf("Error opening file");
+                exit(1);
+        }
+
+        /************************************ File read, encrypted n written in another **************************************************/
+
+        for(int i=0; i <len; i++)
+        {
+                encrypted[i] = fbuff[i]^key[i%len2];
+        }
+        
+        
+        fen = fopen("filename","wb");
+        if( fen !=NULL)
+        {
+                fwrite(encrypted, len, 1, fen);
+
+        }
+        else
+        {
+                printf("Could not encrypt");
+        }
+        fclose(fen);
+
+        fp = fopen("filename", "rb");
         if( fp != NULL)
         {
 
@@ -123,8 +156,13 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
                         printf("File not read");
                         exit(1);
                 }
-
+                printf("**************************************************************************\n");
                 
+                for(int d=0; d<arr[1]; d++)
+                {
+                        decrypted[d] = file_prt2[d]^key[d%len2];
+                }
+                puts(decrypted);
 
                 /**** 3 *****/
 
