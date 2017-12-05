@@ -18,14 +18,15 @@
 
 int listenfd, connfd, site_sock, sock1, n, k, PORT, Cache_Timeout, cache_present;
 int port_specified, port, time_created;
+int valid_md5_exists, hostname_cache_exists, blocked_site_found;
 pid_t childpid;
 socklen_t clilen;
 char buf[MAXLINE];
 struct sockaddr_in cliaddr, servaddr, mainserver_addr;
 char recv_buff[buff_max_size], req_method[10], URL_slash[1024], http_version[10], *url, site[1024], *path;
-char send_request[buff_max_size], rec_buf[buff_max_size], *temp, send_buff[buff_max_size];
+char send_request[buff_max_size], rec_buf[buff_max_size], *temp, send_buff[buff_max_size], *retr;
 char cache_dir[2048], Full_md5[100], dir[100], IP[100];
-char method_error[2048], *conf_buffer, fname[100];
+char method_error[2048], *conf_buffer, fname[100], blocked_error[2048];
 struct hostent *hp;
 FILE *fp, *f1, *f2, *f3;
 time_t time_now;
@@ -51,7 +52,7 @@ void calculate_md5(char *string)
 
 }
 
-int check_md5(char *hash_str, int timeout)
+void check_md5(char *hash_str, int timeout)
 {
 
         size_t max=200;
@@ -61,7 +62,8 @@ int check_md5(char *hash_str, int timeout)
         bzero(dir, sizeof(dir));
         strncpy(dir, cache_dir, strlen(cache_dir));
         strcat(dir,"md5list");
-        
+        valid_md5_exists = 0;        
+
         f1 = fopen(dir, "rb");        
         if(f1 != NULL)
         {
@@ -76,26 +78,24 @@ int check_md5(char *hash_str, int timeout)
                                 time_now = time(NULL);
                                 if((time_now - time_created) < timeout)
                                 {
-                                        temp_var = 5;
+                                        
                                         free(conf_buffer);
                                         fclose(f1);
-                                        return 5;
+                                        valid_md5_exists = 1;
+                                        
                                 }
-                                else return 1;   
+                                  
                         }
                 }
 
         }
         free(conf_buffer);
         fclose(f1);
-        if(temp_var != 0)
-        {
-                return 1;
-        }
+        
 }
 
 
-int check_hostname(char *hostname, char *c_dir)
+void check_hostname(char *hostname, char *c_dir)
 {
 
         bzero(dir, sizeof(dir));
@@ -103,31 +103,61 @@ int check_hostname(char *hostname, char *c_dir)
         strncpy(dir, c_dir, strlen(c_dir));
         strncat(dir, "host_list", strlen("host_list"));
         conf_buffer = (char *)malloc(max*sizeof(char));
-        
+        hostname_cache_exists=0;
         char *tok;
-        int u = 3;
         f3 = fopen(dir, "rb");
 
         if(f3 != NULL)
         {
+                while(!feof(f3))
+                {  
                         getline(&conf_buffer,&max,f3);
                         if(strncmp(conf_buffer, hostname, strlen(hostname)) == 0)
                         {
                                 bzero(conf_buffer, sizeof(conf_buffer));
                                 getline(&conf_buffer,&max,f3);
                                 tok = strtok(conf_buffer, "\n");
-                                puts(tok);                                
+                                                                
                                 bzero(IP, sizeof(IP));
                                 strncpy(IP, tok, strlen(tok));
-                                puts(IP);
-                                u=2;
+                                hostname_cache_exists = 1;
+                                
                         }
+                }
         fclose(f3);
         }
         free(conf_buffer);
-        return u;
+        
 }
 
+
+
+void check_blocked_site(char *site_str)
+{
+        size_t max=200;
+        conf_buffer = (char *)malloc(max*sizeof(char));
+        blocked_site_found = 0;
+
+        fp = fopen("blocked_list", "rb");
+        if(fp != NULL)
+        {
+                while(!feof(fp))
+                {
+                        getline(&conf_buffer,&max,fp);
+
+                        if( strncmp(conf_buffer, site_str, strlen(site_str)) == 0)
+                        {
+                                printf("Blocked site found\n\n");
+                                blocked_site_found=1;      
+                        }
+                        bzero(conf_buffer, sizeof(conf_buffer));
+                }
+        fclose(fp);
+        }
+        
+        free(conf_buffer);
+
+}
 
 
 
@@ -148,7 +178,8 @@ void handle_request(int socketfd, char *cache_directory, int timeout)
         sscanf(recv_buff, "%s %s %s", req_method, URL_slash, http_version);
         printf("Message received : %s, %s, %s\n", req_method, URL_slash, http_version);
 
-
+        blocked_site_found=0;
+        check_blocked_site(URL_slash);
 
         /**************         Check request method (ONLY GET SUPPORTED)      ************/
 
@@ -176,6 +207,37 @@ void handle_request(int socketfd, char *cache_directory, int timeout)
                                 exit(0);
         }
         
+        else if(blocked_site_found)
+        {
+
+                                strncat(blocked_error,"HTTP/1.1",strlen("HTTP/1.1"));
+			        strncat(blocked_error," 403 Forbidden", strlen(" 403 Forbidden"));
+			        strncat(blocked_error,"\n", strlen("\n"));
+			        strncat(blocked_error,"Content-Type: Invalid", strlen("Content-Type: Invalid"));
+			        strncat(blocked_error,"\n", strlen("\n"));
+			        strncat(blocked_error,"Content-Length: Invalid", strlen("Content-Length: Invalid"));
+			        strncat(blocked_error,"\r\n", strlen("\r\n"));
+			        strncat(blocked_error,"\r\n", strlen("\r\n")); 
+			        strncat(blocked_error,"<head><b>403 FORBIDDEN</b><br> </head>", strlen("<head><b>403 FORBIDDEN</b><br> </head>"));
+			        strncat(blocked_error,"<title>403 FORBIDDEN</title>", strlen("<title>403 FORBIDDEN</title>"));
+			        strncat(blocked_error,"<html><body> Reason Blocked Page: ", strlen("<html><body> Reason Blocked Page: "));
+			        strncat(blocked_error,URL_slash,strlen(URL_slash));
+			        strncat(blocked_error,"</body></html>",strlen("</body></html>"));
+			        strncat(blocked_error,"\r\n", strlen("\r\n"));
+                
+
+                                n = send(socketfd, blocked_error, strlen(blocked_error), 0);
+
+                                printf("Sent blocked site error to client\n");
+                                exit(0);
+
+
+
+
+
+        }
+
+
         else
         {
 
@@ -229,11 +291,11 @@ void handle_request(int socketfd, char *cache_directory, int timeout)
 
                 calculate_md5(url);
 
-                cache_present = check_md5(Full_md5, timeout);
+                check_md5(Full_md5, timeout);
 
 
                 /** Status 5 returned only if cached copy exists and hasn't timedout **/
-                if(cache_present != 5)
+                if(!valid_md5_exists)
                 {
 
                         printf("Cached copy doesn't exist OR Invalid\n\n");
@@ -254,10 +316,10 @@ void handle_request(int socketfd, char *cache_directory, int timeout)
 
                          /**  Check if site was already accessed to avoid extra DNS query**/
                                         /* Returns 2 on success and 3 on fail*/
-                        int st;
-                        st = check_hostname(site, cache_directory);
+                        
+                        check_hostname(site, cache_directory);
 
-                        if(st == 3)
+                        if(!hostname_cache_exists)
                         {  
                                 printf("Need to do DNS query\n");                      
                                 hp = gethostbyname(site);
@@ -271,6 +333,32 @@ void handle_request(int socketfd, char *cache_directory, int timeout)
 
                                 printf("actual name - %s\n", hp->h_name);
                                 printf("address - %s\n", inet_ntoa(*((struct in_addr *)hp->h_addr)));
+                                char addr_str[50];
+                                sprintf(addr_str, "%s\n", inet_ntoa(*((struct in_addr *)hp->h_addr)));
+                                check_blocked_site(addr_str);
+                                if(blocked_site_found)
+                                {
+                                        strncat(blocked_error,"HTTP/1.1",strlen("HTTP/1.1"));
+			                strncat(blocked_error," 403 Forbidden", strlen(" 403 Forbidden"));
+			                strncat(blocked_error,"\n", strlen("\n"));
+			                strncat(blocked_error,"Content-Type: Invalid", strlen("Content-Type: Invalid"));
+			                strncat(blocked_error,"\n", strlen("\n"));
+			                strncat(blocked_error,"Content-Length: Invalid", strlen("Content-Length: Invalid"));
+			                strncat(blocked_error,"\r\n", strlen("\r\n"));
+			                strncat(blocked_error,"\r\n", strlen("\r\n")); 
+			                strncat(blocked_error,"<head><b>403 FORBIDDEN</b><br> </head>", strlen("<head><b>403 FORBIDDEN</b><br> </head>"));
+			                strncat(blocked_error,"<title>403 FORBIDDEN</title>", strlen("<title>403 FORBIDDEN</title>"));
+			                strncat(blocked_error,"<html><body> Reason Blocked Page ", strlen("<html><body> Reason Blocked Page "));
+			                //strncat(blocked_error,URL_slash,strlen(URL_slash));
+			                strncat(blocked_error,"</body></html>",strlen("</body></html>"));
+			                strncat(blocked_error,"\r\n", strlen("\r\n"));
+                
+
+                                        n = send(socketfd, blocked_error, strlen(blocked_error), 0);
+
+                                        printf("Sent blocked site(IP) error to client\n");
+                                        exit(0);
+                                }
 
                                 /* Save hostname n IP for future reference*/
 
@@ -291,7 +379,7 @@ void handle_request(int socketfd, char *cache_directory, int timeout)
 
                         mainserver_addr.sin_family = AF_INET;
                         mainserver_addr.sin_port = htons(port);
-                        if(st == 3)
+                        if(!hostname_cache_exists)
                         {
                                 bcopy((char*)hp->h_addr, (char*)&mainserver_addr.sin_addr.s_addr,hp->h_length );
                         }
@@ -356,7 +444,7 @@ void handle_request(int socketfd, char *cache_directory, int timeout)
                 }
 
                 /** if status after check is 5, non-timedout copy exists which can be used to send back to client **/
-                else if(cache_present == 5)
+                else if(valid_md5_exists)
                 {
 
                         printf("\n*****  Valid cached copy exists  ******\n\n");
