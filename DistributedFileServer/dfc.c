@@ -18,7 +18,7 @@
 
 FILE *conf;
 char dfc_conf[30], *conf_buffer, username[20], password[20], cmd[60], req_method[30];
-char filename[30], send_buff[buff_max_size];
+char filename[30], send_buff[buff_max_size], subfolder[60], rec_buff1[buff_max_size];
 char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
 int port[4], b_size[4], chunk_size,rem_size;
 int sockfd1, sockfd2, sockfd3, sockfd4 ;
@@ -38,7 +38,7 @@ void extract_ports(char *buff1, int i)
 }
 
 
-void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int suffix1, char *buf2, int suffix2, char *Username, char *Password, char *req_type)
+void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int suffix1, char *buf2, int suffix2, char *Username, char *Password, char *req_type, char *sub_f)
 {
         int rec, len1, len2;
         char fname1[30], fname2[30], rec_buff[90];
@@ -52,7 +52,7 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
 
 
 
-        sprintf(send_buff,"%s %s %d %s %d %s %s %d ", req_type, fname1, len1, fname2, len2, Username, Password, server_no);
+        sprintf(send_buff,"%s %s %s %d %s %d %s %s %d ", req_type, sub_f, fname1, len1, fname2, len2, Username, Password, server_no);
         //puts(send_buff);
         send(socketfd, send_buff, strlen(send_buff), 0);
         
@@ -241,23 +241,33 @@ int main(int argc, char **argv)
        {
                 printf("\n\n\n");
                 printf(" *-*-*-*-*-*-*-  The following commands are handled by the DFC :    *-*-*-*-*-*-*-\n");
-                printf("                1. LIST : lists files stored at the server ofr a given username \n ");
-                printf("               2. PUT filename: Sends a file to the distributed servers\n");
-                printf("                3. GET filename: Retrieves a file from the distributed servers\n\n\r ");
+                printf("                1. LIST subfolder : lists files stored at the server ofr a given username \n ");
+                printf("               2. PUT filename subfolder: Sends a file to the distributed servers\n");
+                printf("                3. GET filename subfolder: Retrieves a file from the distributed servers\n\n\r ");
+                printf("                4. MKDIR subfolder : Makes a subfolder on all servers\n\n\r ");
+
+
                 bzero(cmd, sizeof(cmd));
                 bzero(filename, sizeof(filename));
+                bzero(req_method, sizeof(req_method));
+
+
                 fgets(cmd, MAXLINE, stdin);
                 puts(cmd);
 
-                if( (strncmp(cmd, "PUT", 3) == 0) || (strncmp(cmd, "put", 3) == 0))
+                if(strncmp(cmd, "PUT", 3) == 0) 
                 {
                         char *tok2;
                         tok2 = strtok(cmd, " ");
                         strncpy(req_method, tok2, strlen(tok2));
                         puts(req_method);
-                        tok2 = strtok(NULL, " \t\n");
+                        tok2 = strtok(NULL, " ");
                         strncpy(filename, tok2, strlen(tok2));
                         puts(filename);
+                        tok2 = strtok(NULL, " \t\n");
+                        strncpy(subfolder, tok2, strlen(tok2));
+                        puts(subfolder);
+
 
                         int mod = mod_from_md5(filename);
                         printf("mod : %d\n", mod);
@@ -278,18 +288,18 @@ int main(int argc, char **argv)
                         {
                                 case 0:
                 
-                                        sendto_server(sockfd1, 1, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
-                                        sendto_server(sockfd2, 2, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
-                                        sendto_server(sockfd3, 3, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
-                                        sendto_server(sockfd4, 4, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
+                                        sendto_server(sockfd1, 1, filename, fbuff1, 1, fbuff2, 2, username, password, req_method, subfolder); 
+                                        sendto_server(sockfd2, 2, filename, fbuff2, 2, fbuff3, 3, username, password, req_method, subfolder); 
+                                        sendto_server(sockfd3, 3, filename, fbuff3, 3, fbuff4, 4, username, password, req_method, subfolder); 
+                                        sendto_server(sockfd4, 4, filename, fbuff4, 4, fbuff1, 1, username, password, req_method, subfolder);
                                         break; 
 
                                 case 1:
 
-                                        sendto_server(sockfd1, 1, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
-                                        sendto_server(sockfd2, 2, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
-                                        sendto_server(sockfd3, 3, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
-                                        sendto_server(sockfd4, 4, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
+                                        sendto_server(sockfd1, 1, filename, fbuff4, 4, fbuff1, 1, username, password, req_method, subfolder);
+                                        sendto_server(sockfd2, 2, filename, fbuff1, 1, fbuff2, 2, username, password, req_method, subfolder); 
+                                        sendto_server(sockfd3, 3, filename, fbuff2, 2, fbuff3, 3, username, password, req_method, subfolder); 
+                                        sendto_server(sockfd4, 4, filename, fbuff3, 3, fbuff4, 4, username, password, req_method, subfolder); 
  
 
                                         break; 
@@ -297,29 +307,97 @@ int main(int argc, char **argv)
 
                                 case 2:
 
-                                        sendto_server(sockfd1, 1, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
-                                        sendto_server(sockfd2, 2, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
-                                        sendto_server(sockfd3, 3, filename, fbuff1, 1, fbuff2, 2, username, password, req_method);
-                                        sendto_server(sockfd4, 4, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
+                                        sendto_server(sockfd1, 1, filename, fbuff3, 3, fbuff4, 4, username, password, req_method, subfolder); 
+                                        sendto_server(sockfd2, 2, filename, fbuff4, 4, fbuff1, 1, username, password, req_method, subfolder);
+                                        sendto_server(sockfd3, 3, filename, fbuff1, 1, fbuff2, 2, username, password, req_method, subfolder);
+                                        sendto_server(sockfd4, 4, filename, fbuff2, 2, fbuff3, 3, username, password, req_method, subfolder); 
  
                                         break; 
 
 
                                 case 3:
 
-                                        sendto_server(sockfd1, 1, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
-                                        sendto_server(sockfd2, 2, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
-                                        sendto_server(sockfd3, 3, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
-                                        sendto_server(sockfd4, 4, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
+                                        sendto_server(sockfd1, 1, filename, fbuff2, 2, fbuff3, 3, username, password, req_method, subfolder); 
+                                        sendto_server(sockfd2, 2, filename, fbuff3, 3, fbuff4, 4, username, password, req_method, subfolder); 
+                                        sendto_server(sockfd3, 3, filename, fbuff4, 4, fbuff1, 1, username, password, req_method, subfolder);
+                                        sendto_server(sockfd4, 4, filename, fbuff1, 1, fbuff2, 2, username, password, req_method, subfolder); 
 
                                         break; 
 
                         }
                 
+                } // if command put
+
+
+                else if( strncmp(cmd, "GET", 3) == 0 )
+                {
+                        char *tok2;
+                        tok2 = strtok(cmd, " ");
+                        strncpy(req_method, tok2, strlen(tok2));
+                        puts(req_method);
+                        tok2 = strtok(NULL, " \t\n");
+                        strncpy(filename, tok2, strlen(tok2));
+                        puts(filename);
+
+                        
+
+                }
+
+                
+
+                else if( strncmp(cmd, "MKDIR", 5) == 0)
+                {
+                        char *tok3;
+                        int rec;
+                        tok3 = strtok(cmd, " ");
+                        strncpy(req_method, tok3, strlen(tok3));
+                        tok3 = strtok(NULL, " ");
+                        strncpy(subfolder, tok3, strlen(tok3));
+                        printf("Making the subfolder on all servers : ");
+                        puts(subfolder);
+
+                                                /**************************/
+                        sprintf(send_buff, "%s %s %s %s %d", req_method, subfolder, username, password, 1);
+                        send(sockfd1, send_buff, strlen(send_buff), 0 );
+
+                        bzero(rec_buff1, sizeof(rec_buff1));
+                        rec = recv(sockfd1, rec_buff1, 90, 0);
+                        printf("\n\n After sending command to mkdir,Server1 says : ");
+                        puts(rec_buff1);
+
+                                                /**************************/                       
+                        sprintf(send_buff, "%s %s %s %s %d", req_method, subfolder, username, password, 2);
+                        send(sockfd2, send_buff, strlen(send_buff), 0 );
+
+                        bzero(rec_buff1, sizeof(rec_buff1));
+                        rec = recv(sockfd2, rec_buff1, 90, 0);
+                        printf("\n\n After sending command to mkdir,Server2 says : ");
+                        puts(rec_buff1);
+
+                                                /**************************/
+                        sprintf(send_buff, "%s %s %s %s %d", req_method, subfolder, username, password, 3);
+                        send(sockfd3, send_buff, strlen(send_buff), 0 );
+
+                        bzero(rec_buff1, sizeof(rec_buff1));
+                        rec = recv(sockfd3, rec_buff1, 90, 0);
+                        printf("\n\n After sending command to mkdir,Server1 says : ");
+                        puts(rec_buff1);
+
+                                                /**************************/
+                        sprintf(send_buff, "%s %s %s %s %d", req_method, subfolder, username, password, 4);
+                        send(sockfd4, send_buff, strlen(send_buff), 0 );
+
+                        bzero(rec_buff1, sizeof(rec_buff1));
+                        rec = recv(sockfd4, rec_buff1, 90, 0);
+                        printf("\n\n After sending command to mkdir,Server1 says : ");
+                        puts(rec_buff1);
+
+
+
                 }
 
 
-        }
+        } // while
 
 
 
@@ -327,4 +405,4 @@ int main(int argc, char **argv)
          
         
  //exit(0);
-}
+} // main

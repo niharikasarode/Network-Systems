@@ -21,7 +21,7 @@ int SERV_PORT,listenfd, connfd, n;
 socklen_t clilen;
 char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
 char recv_buff[MAXLINE], username[30], username_rec[30], password[30], password_rec[30], *conf_buffer, req_method[30];
-char fname1[30], fname2[30], root_dir[200];
+char fname1[30], fname2[30], root_dir[200], subfolder[60];
 int f1_size, f2_size, server_no;
 struct sockaddr_in cliaddr, servaddr;
 size_t max = 200;
@@ -36,23 +36,26 @@ void handle_request(int socketfd)
                 n = recv(socketfd, recv_buff, MAXLINE,0);  
                 if(n > 0)
                 {
-                        printf("Received buf size : %d\n", n);
+                       
 
+                        bzero(fbuff1, sizeof(fbuff1));
                         strncpy(fbuff1, recv_buff, strlen(recv_buff));
                         bzero(recv_buff, sizeof(recv_buff));
-                        if( (strncmp(fbuff1,"PUT",3) ==0 ) || (strncmp(fbuff1,"GET",3) ==0 ) ||  (strncmp(fbuff1,"LIST",4) ==0 )  )
+                        bzero(root_dir, sizeof(root_dir));
+
+                        if( strncmp(fbuff1,"PUT",3) ==0 )
                         { 
                                 
                                 printf("\n\n");
-                                sscanf(fbuff1,"%s %s %d %s %d %s %s %d", req_method, fname1, &f1_size, fname2, &f2_size, username_rec, password_rec, &server_no );
-                                printf("\n %s %s %d %s %d %s %s %d\n", req_method, fname1, f1_size, fname2, f2_size, username_rec, password_rec, server_no );
+                                sscanf(fbuff1,"%s %s %s %d %s %d %s %s %d", req_method, subfolder, fname1, &f1_size, fname2, &f2_size, username_rec, password_rec, &server_no );
+                                printf("\n %s %s %s %d %s %d %s %s %d\n", req_method, subfolder, fname1, f1_size, fname2, f2_size, username_rec, password_rec, server_no );
                                 
                                 if( (strcmp(username, username_rec) == 0) && (strcmp(password, password_rec) == 0))
                                 {               
                                         send(socketfd, "ACK", 3, 0);
 
 
-/********************************************************   WRITING 1ST FILE PART   ***********************************************************/
+                /*******************************   WRITING 1ST FILE PART   *************************************/
 
 
 
@@ -62,29 +65,25 @@ void handle_request(int socketfd)
                                         //printf("\n\n");
 
                                         char usr_dir[40];
-                                        if(server_no == 1)
-                                        {
-                                                sprintf(usr_dir, "./DFS1/%s",username);
-                                        }
-                                        else if(server_no == 2)
-                                        {
-                                                sprintf(usr_dir, "./DFS2/%s",username);
-                                        }
+                                        sprintf(usr_dir, "./DFS%d/%s", server_no, username);
 
-                                        else if(server_no == 3)
-                                        {
-                                                sprintf(usr_dir, "./DFS3/%s",username);
-                                        }
-                                        else if(server_no == 4)
-                                        {
-                                                sprintf(usr_dir, "./DFS4/%s",username);
-                                        }
-                                        
                                         strncpy(root_dir, usr_dir, strlen(usr_dir));
 
                                 /*** Checking if directory for a Username Already Exists, if not create one ***/
 
                                         DIR* dir = opendir(usr_dir);
+                                        if(ENOENT == errno)
+                                        {
+                                                printf("\n Directory does not exist. Making one....\n");
+                                                mkdir(usr_dir, 0777);
+
+                                        }
+
+                                        sprintf(usr_dir, "%s/%s", root_dir, subfolder);
+                                        bzero(root_dir, sizeof(root_dir));
+                                        strncpy(root_dir, usr_dir, strlen(usr_dir));            // root_dir = ./DFS*/Username/Subfolder
+   
+                                        dir = opendir(usr_dir);
                                         if(ENOENT == errno)
                                         {
                                                 printf("\n Directory does not exist. Making one....\n");
@@ -113,7 +112,7 @@ void handle_request(int socketfd)
 
                                         }
 
-/********************************************************   WRITING 2ND FILE PART   ***********************************************************/
+                /*****************************   WRITING 2ND FILE PART   *************************************/
 
                                         n = recv(socketfd, recv_buff, buff_max_size, 0);
                                         strncpy(fbuff3, recv_buff, strlen(recv_buff));
@@ -143,14 +142,69 @@ void handle_request(int socketfd)
                                         
                                 }
 
-                                else
+                                else            //if username/password is invalid
                                 {
                                         printf("Invalid Username/Password received ! \n");
                                         send(socketfd, "Invalid Username/Password", 25, 0);
                                 }
                         
-                        //send(connfd, buf, n, 0);
+                        
                         }
+
+                        else if( strncmp(fbuff1,"MKDIR",5) ==0 )
+                        {
+                                sscanf(fbuff1, "%s %s %s %s %d", req_method, subfolder, username_rec, password_rec, &server_no);
+                                printf("Request : %s %s %s %s %d", req_method, subfolder, username_rec, password_rec, server_no);
+
+                                if( (strcmp(username, username_rec) == 0) && (strcmp(password, password_rec) == 0))
+                                {               
+                                        send(socketfd, "ACK", 3, 0);
+                                        
+                                        char usr_dir[40];
+                                        
+                                        sprintf(usr_dir, "./DFS%d/%s", server_no, username);
+                                        
+                                        
+                                        strncpy(root_dir, usr_dir, strlen(usr_dir));
+
+                                /*** Checking if subfolder for a Username/subfolder Already Exists, if not create one ***/
+
+                                        DIR* dir = opendir(usr_dir);
+                                        if(ENOENT == errno)
+                                        {
+                                                printf("\n subfolder does not exist. Making one....\n");
+                                                mkdir(usr_dir, 0777);
+
+                                        }
+                                        
+
+                                        sprintf(usr_dir, "%s/%s", root_dir, subfolder);
+                                        DIR* dir1 = opendir(usr_dir);
+                                        if(ENOENT == errno)
+                                        {
+                                                printf("\n subfolder does not exist. Making one....\n");
+                                                mkdir(usr_dir, 0777);
+
+                                        }
+                                        
+
+                                }
+
+                                else
+                                {
+                                        
+                                        printf("Invalid Username/Password received ! \n");
+                                        send(socketfd, "Invalid Username/Password", 25, 0);
+                                
+                                }
+
+                        }
+                        
+                        else            //if req_method is not put/get/list
+                        {
+                                send(socketfd, "Invalid Request Method", 22, 0);
+                        }
+
                 }
 
                 else
