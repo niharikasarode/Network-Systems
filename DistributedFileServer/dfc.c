@@ -273,7 +273,7 @@ int main(int argc, char **argv)
                         printf("mod : %d\n", mod);
                         chunk_size = 0;
                         rem_size =0;
-                        file_divide(filename, fbuff1, fbuff2, fbuff3, fbuff4, b_size);
+                        file_divide(filename, fbuff1, fbuff2, fbuff3, fbuff4, b_size, password);
 
                         /*printf(" ********************************** Part 1 ************************************** \n");
                         puts(fbuff1);

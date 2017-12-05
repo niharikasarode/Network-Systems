@@ -20,7 +20,7 @@
 int SERV_PORT,listenfd, connfd, n;
 socklen_t clilen;
 char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
-char recv_buff[MAXLINE], username[30], username_rec[30], password[30], password_rec[30], *conf_buffer, req_method[30];
+char recv_buff[buff_max_size], username[30], username_rec[30], password[30], password_rec[30], *conf_buffer, req_method[30];
 char fname1[30], fname2[30], root_dir[200], subfolder[60];
 int f1_size, f2_size, server_no;
 struct sockaddr_in cliaddr, servaddr;
@@ -33,15 +33,18 @@ void handle_request(int socketfd)
                 
         while(1)
         {
+                bzero(recv_buff, sizeof(recv_buff));
                 n = recv(socketfd, recv_buff, MAXLINE,0);  
                 if(n > 0)
                 {
                        
-
+                        char decrypt[99999];
+                        bzero(decrypt, sizeof(decrypt));
                         bzero(fbuff1, sizeof(fbuff1));
                         strncpy(fbuff1, recv_buff, strlen(recv_buff));
                         bzero(recv_buff, sizeof(recv_buff));
                         bzero(root_dir, sizeof(root_dir));
+                        char key[30];
 
                         if( strncmp(fbuff1,"PUT",3) ==0 )
                         { 
@@ -57,10 +60,10 @@ void handle_request(int socketfd)
 
                 /*******************************   WRITING 1ST FILE PART   *************************************/
 
-
-
+                                        int len2 = strlen(password);
+                                        strncpy(key, password, len2);
                                         n = recv(socketfd, recv_buff, buff_max_size, 0);
-                                        strncpy(fbuff2, recv_buff, strlen(recv_buff));
+                                        //strncpy(fbuff2, recv_buff, f1_size);
                                         //puts(fbuff2);
                                         //printf("\n\n");
 
@@ -98,7 +101,15 @@ void handle_request(int socketfd)
                                         if(fp1 != NULL)
                                         {
                                                 //printf("\n\n buff size is %d\n", f1_size);
-                                                fwrite(fbuff2, f1_size, 1, fp1);
+
+                                                /*for(int l=0; l<f1_size; l++)
+                                                {
+                                                        decrypt[l] = recv_buff[l]^key[l%len2];
+
+                                                }
+                                                printf("******************************************\n");
+                                                puts(decrypt);*/
+                                                fwrite(recv_buff, f1_size, 1, fp1);
 
                                                 fclose(fp1);
 
@@ -114,8 +125,9 @@ void handle_request(int socketfd)
 
                 /*****************************   WRITING 2ND FILE PART   *************************************/
 
+                                        bzero(recv_buff, sizeof(recv_buff));
                                         n = recv(socketfd, recv_buff, buff_max_size, 0);
-                                        strncpy(fbuff3, recv_buff, strlen(recv_buff));
+                                        //strncpy(fbuff3, recv_buff, f2_size);
 
                                         sprintf(usr_dir,"%s/%s",root_dir, fname2);
                                         FILE *fp2;
@@ -123,8 +135,16 @@ void handle_request(int socketfd)
                                         
                                         if(fp2 != NULL)
                                         {
-                                                //printf("\n\n buff size is %d\n", f1_size);
-                                                fwrite(fbuff3, f2_size, 1, fp2);
+                                                /*bzero(decrypt, sizeof(decrypt));
+                                                for(int l=0; l<f2_size; l++)
+                                                {
+                                                        decrypt[l] = recv_buff[l]^key[l%len2];
+
+                                                }
+
+                                                
+                                                //printf("\n\n buff size is %d\n", f1_size);*/
+                                                fwrite(recv_buff, f2_size, 1, fp2);
 
                                                 fclose(fp2);
 
