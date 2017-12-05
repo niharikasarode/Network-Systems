@@ -19,8 +19,8 @@
 FILE *conf, *fi;
 char dfc_conf[30], *conf_buffer, username[20], password[20], cmd[60], req_method[30];
 char filename[30], send_buff[buff_max_size], subfolder[60], rec_buff1[buff_max_size];
-char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
-char f_ver1[buff_max_size], f_ver2[buff_max_size], f_ver3[buff_max_size], f_ver4[buff_max_size];
+char *fbuff1, *fbuff2, *fbuff3, *fbuff4;
+char *f_ver1, *f_ver2, *f_ver3, *f_ver4;
 char *DFS1_list[99],*DFS2_list[99], *DFS3_list[99], *DFS4_list[99];
 int DFS1_count[10], DFS2_count[10], DFS3_count[10], DFS4_count[10];
 int port[4], b_size[4], chunk_size,rem_size, req_version;
@@ -142,11 +142,12 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
 
                 if(strncmp(rec_buff, "ACK",3) == 0)
                 {
-                        bzero(rec_buff, sizeof(rec_buff));
+
                       
                                 /******      SEND  buf2       *****/   
 
                         send(socketfd, buf2, len2, 0);
+                        bzero(rec_buff, sizeof(rec_buff));
                         rec = recv(socketfd, rec_buff, 90, 0);
                         printf("\n\n After sending 2nd PART Server says : ");
                         puts(rec_buff);
@@ -168,7 +169,7 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
 
 
                         tv.tv_sec = 0;
-                        tv.tv_usec = 800000;
+                        tv.tv_usec = 1000000;
 
                         setsockopt(socketfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
                         sprintf(send_buff, "%s %s %s %s %d", req_type, sub_folder, Username, Password, server_no);
@@ -325,15 +326,27 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
 void get_version(int socketfd, char *file_name1, char *sub_folder, char *Username, char *Password, int version_no, int server_no)
 {
 
+        close(socketfd);
+        if ((socketfd = socket (AF_INET, SOCK_STREAM, 0)) <0) {
+        perror("Problem in creating the socket");
+        exit(2);
+        }
+        servaddr.sin_port =  htons(port[server_no -1]); //convert to big-endian order
+        if (connect(socketfd, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
+        {
+                perror("Problem in connecting to the server");
+                exit(3);
+        }       
 
-    
+
+
         char decrypt[buff_max_size];        
         bzero(decrypt, sizeof(decrypt));
         char key1[100];
         int key_len = strlen(Password);
         strncpy(key1, Password, key_len);
         tv.tv_sec = 0;
-        tv.tv_usec = 800000;
+        tv.tv_usec = 1000000;
 
         setsockopt(sockfd1, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         memset(send_buff, 0, sizeof(send_buff));
@@ -345,7 +358,7 @@ void get_version(int socketfd, char *file_name1, char *sub_folder, char *Usernam
         bzero(rec_buff1, sizeof(rec_buff1));
         int rec = recv(socketfd, rec_buff1, 90, 0);
 
-        
+        puts(rec_buff1);
                 
         if((rec < 0) || rec == 0)
         {
@@ -367,6 +380,7 @@ void get_version(int socketfd, char *file_name1, char *sub_folder, char *Usernam
         {
                 if(strncmp(rec_buff1,"Available",9)==0)  
                 {
+
                         char status[20];
                         sscanf(rec_buff1, "%s %d", status, &fsize_1);
                         if(version_no == 4)
@@ -375,14 +389,14 @@ void get_version(int socketfd, char *file_name1, char *sub_folder, char *Usernam
                                 sumofvers = (3*fsize_2)+ fsize_4;
                         }
                         else fsize_2 = fsize_1;
-                        
+
                         sprintf(send_buff, "Send file part");
                         send(socketfd, send_buff, strlen(send_buff), 0);
 
                         bzero(rec_buff1, sizeof(rec_buff1));
                         int rec= recv(socketfd, rec_buff1, fsize_1, 0);
 
-                        
+
                         if(version_no == 1)
                         {       
                                 for(int l=0; l<fsize_1; l++)
@@ -422,7 +436,7 @@ void get_version(int socketfd, char *file_name1, char *sub_folder, char *Usernam
                         }
 
 
-                        
+
                         version_obtainedflag |= 1 << version_no;
                         
                 }
@@ -459,10 +473,7 @@ void get_version(int socketfd, char *file_name1, char *sub_folder, char *Usernam
 int main(int argc, char **argv)
 {
        
-        char sendline[MAXLINE], recvline[MAXLINE];
-        strncpy(sendline, "Send this please work", 21);
-        //int svar =0;
-
+        
         //basic check of the arguments
         //additional checks can be inserted
         if (argc !=2) 
@@ -484,6 +495,11 @@ int main(int argc, char **argv)
 
         else
         {
+
+            while(1)
+            {
+
+
                 int port_num=0;
                 conf_buffer = (char *)malloc(max*sizeof(char));
                 while(!feof(conf))
@@ -516,15 +532,12 @@ int main(int argc, char **argv)
                         }
 
 
-                } 
+                }
+                free(conf_buffer); 
  
-        }
+        
 
-        server_upflag=0;
-        server1_down_flag=0; 
-        server2_down_flag=0;                                                
-        server3_down_flag=0;                                                
-        server3_down_flag=0;                                                                                               
+                                                                                                     
         
         //Creation of the socket
        if ((sockfd1 = socket (AF_INET, SOCK_STREAM, 0)) <0) {
@@ -543,7 +556,7 @@ int main(int argc, char **argv)
         perror("Problem in connecting to the server");
         exit(3);
         }
-        else printf("Connected to server \n\n" );
+        
 
         servaddr.sin_port =  htons(port[1]); //convert to big-endian order
 
@@ -559,7 +572,7 @@ int main(int argc, char **argv)
                 perror("Problem in connecting to the server");
                 exit(3);
         }
-        else printf("Connected to server \n\n" );
+       
 
 
         servaddr.sin_port =  htons(port[2]); //convert to big-endian order
@@ -576,7 +589,7 @@ int main(int argc, char **argv)
                 perror("Problem in connecting to the server");
                 exit(3);
         }
-        else printf("Connected to server \n\n" );
+
 
 
         servaddr.sin_port =  htons(port[3]); //convert to big-endian order
@@ -592,17 +605,15 @@ int main(int argc, char **argv)
                 perror("Problem in connecting to the server");
                 exit(3);
         }
-        else printf("Connected to server \n\n" );
+        
 
-       
+        server_upflag=0;
+        server1_down_flag=0; 
+        server2_down_flag=0;                                                
+        server3_down_flag=0;                                                
+        server3_down_flag=0;         
 
 
-                /*send(sockfd1, sendline, strlen(sendline), 0);
-                send(sockfd2, sendline, strlen(sendline), 0);
-                send(sockfd3, sendline, strlen(sendline), 0);
-                send(sockfd4, sendline, strlen(sendline), 0);*/
-       while(1)
-       {
                 printf("\n\n\n");
                 printf(" *-*-*-*-*-*-*-  The following commands are handled by the DFC :    *-*-*-*-*-*-*-\n");
                 printf("                1. LIST/list subfolder : lists files stored at the server ofr a given username \n ");
@@ -634,6 +645,25 @@ int main(int argc, char **argv)
                                                 printf("mod : %d\n", mod);
                                                 chunk_size = 0;
                                                 rem_size =0;
+                                                
+                                                fbuff1 = (char*) calloc(buff_max_size, sizeof(char));
+                                                if(fbuff1 == NULL) printf("No memory alloc 1\n");
+                                                else printf("Mem alloc 1\n");
+                                                 
+                                                fbuff2 = (char*) calloc(buff_max_size, sizeof(char));
+                                                if(fbuff2 == NULL) printf("No memory alloc 2\n");
+                                                else printf("Mem alloc 2\n");
+                                                
+                                                fbuff3 = (char*) calloc(buff_max_size, sizeof(char));
+                                                if(fbuff3 == NULL) printf("No memory alloc 3\n");
+                                                else printf("Mem alloc 3\n");
+ 
+                                                fbuff4 = (char*) calloc(buff_max_size, sizeof(char));
+                                                if(fbuff4 == NULL) printf("No memory alloc 4\n");
+                                                else printf("Mem alloc 4\n");
+
+
+
                                                 file_divide(filename, fbuff1, fbuff2, fbuff3, fbuff4, b_size, password);
 
                                                 switch(mod)
@@ -677,6 +707,11 @@ int main(int argc, char **argv)
                                                         break; 
 
                                                 }
+                                                
+                                                free(fbuff1);
+                                                free(fbuff2);
+                                                free(fbuff3);
+                                                free(fbuff4);
                 
                                         } // if command put
 
@@ -685,10 +720,20 @@ int main(int argc, char **argv)
                                         {
 
 
-                                                bzero(f_ver1, sizeof(f_ver1));
-                                                bzero(f_ver2, sizeof(f_ver2));
-                                                bzero(f_ver3, sizeof(f_ver3));
-                                                bzero(f_ver4, sizeof(f_ver4));
+                                                f_ver1 = (char*) calloc(buff_max_size , sizeof(char));
+                                                if(f_ver1 == NULL) printf("No memory alloc 1\n");
+                
+                                                f_ver2 = (char*) calloc(buff_max_size , sizeof(char));
+                                                if(f_ver2 == NULL) printf("No memory alloc 2\n");
+
+                                                f_ver3 = (char*) calloc(buff_max_size , sizeof(char));
+                                                if(f_ver3 == NULL) printf("No memory alloc 3\n");
+
+                                                f_ver4 = (char*) calloc(buff_max_size , sizeof(char));
+                                                if(f_ver4 == NULL) printf("No memory alloc 4\n");
+                                                
+
+
                                                 version_obtainedflag=0;
 
                                                 req_ver4 =0;
@@ -705,7 +750,7 @@ int main(int argc, char **argv)
                                                         server_num++;
                                                 }while( (version_obtainedflag != 2) && (server_num <5));              
                                                                                 // version_obtainedflag = 04312 if all versions 
-                
+
                                                 server_num = 1;      
                                                 do
                                                 {       
@@ -812,7 +857,12 @@ int main(int argc, char **argv)
                                                         fsize_1 =0;
                                                         fsize_2 =0;
                                                         fsize_3 =0;
-                                                        fsize_4 =0;                
+                                                        fsize_4 =0;
+                                                        free(f_ver1);
+                                                        free(f_ver2);
+                                                        free(f_ver3);
+                                                        free(f_ver4);
+                                                        
                                                 }
         
 
@@ -975,7 +1025,7 @@ int main(int argc, char **argv)
 
 
 
-
+     } // else for the argument check
          
         
  //exit(0);

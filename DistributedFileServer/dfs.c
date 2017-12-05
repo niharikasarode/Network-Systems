@@ -19,21 +19,20 @@
 
 int SERV_PORT,listenfd, connfd, n;
 socklen_t clilen;
-char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
+char fbuff1[buff_max_size], *fbuff2, fbuff3[buff_max_size], *fbuff4;
 char recv_buff[buff_max_size], username[30], username_rec[30], password[30], password_rec[30], *conf_buffer, req_method[30];
 char fname1[30], fname2[30], root_dir[200], subfolder[60];
 int f1_size, f2_size, server_no, req_version, found_version;
 struct sockaddr_in cliaddr, servaddr;
 size_t max = 200;
 int file_presentflag, version_presentflag;
-
+char Users[10][256], num_users=0, index_Users=0, valid_user=0;
 
 
 void handle_request(int socketfd)
 {
-                
-        while(1)
-        {
+        printf("\n\n*********************      Handling request listen sock : %d        ******************\n\n", connfd);                
+       
                 bzero(recv_buff, sizeof(recv_buff));
                 n = recv(socketfd, recv_buff, MAXLINE,0);  
                 if(n > 0)
@@ -46,7 +45,7 @@ void handle_request(int socketfd)
                         strncpy(fbuff1, recv_buff, strlen(recv_buff));
                         bzero(recv_buff, sizeof(recv_buff));
                         bzero(root_dir, sizeof(root_dir));
-                        bzero(fbuff2, sizeof(fbuff2));
+
                         bzero(fname1, sizeof(fname1));
                         bzero(fname2, sizeof(fname2));
                         bzero(req_method, sizeof(req_method));
@@ -60,9 +59,16 @@ void handle_request(int socketfd)
                                 printf("\n\n");
                                 sscanf(fbuff1,"%s %s %s %d %s %d %s %s %d", req_method, subfolder, fname1, &f1_size, fname2, &f2_size, username_rec, password_rec, &server_no );
                                 printf("\n %s %s %s %d %s %d %s %s %d\n", req_method, subfolder, fname1, f1_size, fname2, f2_size, username_rec, password_rec, server_no );
-                                
-                                if( (strcmp(username, username_rec) == 0) && (strcmp(password, password_rec) == 0))
-                                {               
+                               
+                                for(int d=0; d<num_users; d++)
+                                {
+                                        if( ((strcmp(Users[2*d], username_rec) == 0) && (strcmp(Users[2*d+1], password_rec) == 0)) ) valid_user=1;
+                                        
+                                }
+
+                                if(valid_user == 1)
+                                {
+                                        valid_user=0;               
                                         send(socketfd, "ACK", 3, 0);
 
 
@@ -70,14 +76,12 @@ void handle_request(int socketfd)
 
                                         int len2 = strlen(password);
                                         strncpy(key, password, len2);
-                                        bzero(recv_buff, sizeof(recv_buff));
-                                        n = recv(socketfd, recv_buff, buff_max_size, 0);
-                                        //strncpy(fbuff2, recv_buff, f1_size);
-                                        //puts(fbuff2);
-                                        //printf("\n\n");
-
+                                        fbuff2 = (char*)calloc(buff_max_size,sizeof(char));
+                                        if(fbuff2 == NULL) printf("fbuff2 mem not allocated\n\n");
+                                        n = recv(socketfd, fbuff2, buff_max_size, 0);
+                                        
                                         char usr_dir[40];
-                                        sprintf(usr_dir, "./DFS%d/%s", server_no, username);
+                                        sprintf(usr_dir, "./DFS%d/%s", server_no, username_rec);
 
                                         strncpy(root_dir, usr_dir, strlen(usr_dir));
 
@@ -118,10 +122,10 @@ void handle_request(int socketfd)
                                                 }
                                                 printf("******************************************\n");
                                                 puts(decrypt);*/
-                                                fwrite(recv_buff, f1_size, 1, fp1);
+                                                fwrite(fbuff2, f1_size, 1, fp1);
 
                                                 fclose(fp1);
-
+                                                free(fbuff2);
                                                 send(socketfd, "ACK", 3, 0);
                                         }
 
@@ -134,8 +138,10 @@ void handle_request(int socketfd)
 
                 /*****************************   WRITING 2ND FILE PART   *************************************/
 
-                                        bzero(recv_buff, sizeof(recv_buff));
-                                        n = recv(socketfd, recv_buff, buff_max_size, 0);
+                                        fbuff4 = (char*)calloc(buff_max_size,sizeof(char));
+                                        if(fbuff4 == NULL) printf("fbuff2 mem not allocated\n\n");
+
+                                        n = recv(socketfd, fbuff4, buff_max_size, 0);
                                         //strncpy(fbuff3, recv_buff, f2_size);
 
                                         sprintf(usr_dir,"%s/%s",root_dir, fname2);
@@ -153,10 +159,10 @@ void handle_request(int socketfd)
 
                                                 
                                                 //printf("\n\n buff size is %d\n", f1_size);*/
-                                                fwrite(recv_buff, f2_size, 1, fp2);
+                                                fwrite(fbuff4, f2_size, 1, fp2);
 
                                                 fclose(fp2);
-
+                                                free(fbuff4);
                                                 send(socketfd, "ACK", 3, 0);
                                         }
 
@@ -185,13 +191,20 @@ void handle_request(int socketfd)
                                 sscanf(fbuff1, "%s %s %s %s %d", req_method, subfolder, username_rec, password_rec, &server_no);
                                 printf("Request : %s %s %s %s %d", req_method, subfolder, username_rec, password_rec, server_no);
 
-                                if( (strcmp(username, username_rec) == 0) && (strcmp(password, password_rec) == 0))
-                                {               
+                                for(int d=0; d<num_users ; d++)
+                                {
+                                        if( ((strcmp(Users[2*d], username_rec) == 0) && (strcmp(Users[2*d+1], password_rec) == 0)) ) valid_user=1;
+
+                                }
+
+                                if(valid_user == 1)
+                                {
+                                        valid_user=0;                
                                         send(socketfd, "ACK", 3, 0);
                                         
                                         char usr_dir[40];
                                         
-                                        sprintf(usr_dir, "./DFS%d/%s", server_no, username);
+                                        sprintf(usr_dir, "./DFS%d/%s", server_no, username_rec);
                                         
                                         
                                         strncpy(root_dir, usr_dir, strlen(usr_dir));
@@ -236,8 +249,15 @@ void handle_request(int socketfd)
                                 sscanf(fbuff1, "%s %s %s %s %d", req_method, subfolder, username_rec, password_rec, &server_no);
                                 printf("Request : %s %s %s %s %d\n", req_method, subfolder, username_rec, password_rec, server_no);       
 
-                                if( (strcmp(username, username_rec) == 0) && (strcmp(password, password_rec) == 0))
-                                {               
+                                for(int d=0; d<num_users; d++)
+                                {
+                                        if( ((strcmp(Users[2*d], username_rec) == 0) && (strcmp(Users[2*d+1], password_rec) == 0)) ) valid_user=1;
+
+                                }
+
+                                if(valid_user == 1)
+                                {
+                                        valid_user=0;                
                                         send(socketfd, "ACK", 3, 0);
                                         char usr_dir[40];
 
@@ -248,7 +268,7 @@ void handle_request(int socketfd)
 
                            /***************** Check if folders exists, if not create **************************/
 
-                                        sprintf(usr_dir, "./DFS%d/%s", server_no, username);
+                                        sprintf(usr_dir, "./DFS%d/%s", server_no, username_rec);
                                         strncpy(root_dir, usr_dir, strlen(usr_dir));
 
                                         DIR* dir = opendir(usr_dir);
@@ -334,13 +354,21 @@ void handle_request(int socketfd)
                                 sscanf(fbuff1, "%s %s %s %s %s %d %d", req_method, fname1, subfolder, username_rec, password_rec, &server_no, &req_version);
                                 printf("Request : %s %s %s %s %s %d %d\n", req_method, fname1, subfolder, username_rec, password_rec, server_no, req_version);
 
-                                if( (strcmp(username, username_rec) == 0) && (strcmp(password, password_rec) == 0))
+                                for(int d=0; d<num_users; d++)
                                 {
+                                        if( ((strcmp(Users[2*d], username_rec) == 0) && (strcmp(Users[2*d+1], password_rec) == 0)) ) valid_user=1;
+
+                                }
+
+                                if(valid_user == 1)
+                                {
+                                        valid_user=0; 
 
                                         char usr_dir[200], dotfile[100];
                                         file_presentflag = 0;
                                         version_presentflag =0;
-                                        sprintf(usr_dir, "./DFS%d/%s/%s", server_no, username, subfolder);
+                                        sprintf(usr_dir, "./DFS%d/%s/%s", server_no, username_rec, subfolder);
+                                        puts(usr_dir);
                                         strncpy(root_dir, usr_dir, strlen(usr_dir));
                                         DIR* dir = opendir(usr_dir);                    //No folders on DFS
                                         if(ENOENT == errno)
@@ -400,19 +428,26 @@ void handle_request(int socketfd)
 
                                                                                         bzero(recv_buff, sizeof(recv_buff));
                                                                                         int re = recv(socketfd, recv_buff, 100, 0);
+
                                                                                         printf("Client says : ");
                                                                                         puts(recv_buff);
 
+                                                                                        fbuff2 = (char*)calloc(buff_max_size,sizeof(char));
+                                                                                        if(fbuff2 == NULL) printf("fbuff2 mem not allocated\n\n");
                                                                                         ft = fopen(root_dir,"rb");
                                                                                         if(ft != NULL){
-                                                                                        int arr= fread(fbuff3, sizeof(char), f2_size, ft);
+                                                                                        int arr= fread(fbuff2, sizeof(char), f2_size, ft);
+
                                                                                         if(arr < 0)
                                                                                         {
                                                                                                 printf("File not read");
                                                                                                 send(socketfd,"File not read",13,0);
                                                                                         }
-                                                                                        else send(socketfd,fbuff3,f2_size,0);
+                                                                                        else send(socketfd,fbuff2,f2_size,0);
+                                                                                        fclose(ft);
+
                                                                                         }
+                                                                                        free(fbuff2);
                                                                                         break;
                                                                                                                                                    
                                                                                 }
@@ -472,10 +507,7 @@ void handle_request(int socketfd)
                         close(connfd);
                         exit(1);
                 }
-
-
-        }
-
+                close(connfd);
 
 }
 
@@ -510,8 +542,11 @@ int main (int argc, char **argv)
                                 tok1 = strtok(conf_buffer,":");
                                 tok1 = strtok(NULL, " \n\r");
                                 //tok1 = strtok(NULL, " \t\n");
+                                bzero(username, sizeof(username));
                                 strncpy(username, tok1, strlen(tok1));
                                 puts(username);
+                                strncpy(Users[index_Users], username, strlen(username));
+                                index_Users++;
                                 
                         }
                         else if(strncmp(conf_buffer,"Password",8) == 0)
@@ -520,8 +555,12 @@ int main (int argc, char **argv)
                                 tok1 = strtok(conf_buffer,":");
                                 tok1 = strtok(NULL, " \t\n");
                                 int str_len = strlen(tok1);
+                                bzero(password, sizeof(password));
                                 strncpy(password, tok1, str_len);
                                 puts(password);
+                                strncpy(Users[index_Users], password, strlen(password));
+                                index_Users++;
+                                num_users++;
 
                         }
 
@@ -550,14 +589,19 @@ int main (int argc, char **argv)
                 clilen = sizeof(cliaddr);
                 connfd = accept (listenfd, (struct sockaddr *) &cliaddr, &clilen);
                 printf("%s\n","Received request...");
-                if(connfd != 0)
+                if(connfd < 0)
                 {
-
-                        handle_request(connfd);
+                        printf("Accept Error\n");
+                         close(connfd);
                 }
-                else  close(connfd);
-                
-
+                else 
+                {
+                        if(fork() == 0)
+                        {
+                                handle_request(connfd);
+                        }
+                }
+                close(connfd);
         }
  //close listening socket
  close (listenfd);
