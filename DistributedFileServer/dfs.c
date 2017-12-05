@@ -225,7 +225,7 @@ void handle_request(int socketfd)
                         {
 
                                 sscanf(fbuff1, "%s %s %s %s %d", req_method, subfolder, username_rec, password_rec, &server_no);
-                                printf("Request : %s %s %s %s %d", req_method, subfolder, username_rec, password_rec, server_no);       
+                                printf("Request : %s %s %s %s %d\n", req_method, subfolder, username_rec, password_rec, server_no);       
 
                                 if( (strcmp(username, username_rec) == 0) && (strcmp(password, password_rec) == 0))
                                 {               
@@ -265,19 +265,45 @@ void handle_request(int socketfd)
                                         /********************************************************/
 
                                         struct dirent **ep1;
-                                        char dir_contents[500];
-                                        int dir_contentcount;
-                                        dir_contentcount = scandir(root_dir, &ep1, NULL, alphasort);
-                                        printf("\n Content count : %d\n", dir_contentcount );
+                                        char* dir_contents[500];
+                                        int dir_contentcount[30], count;
+                                        count = scandir(root_dir, &ep1, NULL, alphasort);
+                                        dir_contentcount[0] = count;
+                                        printf("\n Content count : %d\n", dir_contentcount[0] );
 
-                                        for(char i=1 ; i <= dir_contentcount; i++)
+                                        //sending number of contents of subfolder
+                                        send(socketfd, dir_contentcount, 20, 0);
+                                        printf("Directory content-Count sent\n");
+                                        
+                                        bzero(recv_buff, sizeof(recv_buff));
+                                        n = recv(socketfd, recv_buff, buff_max_size, 0);
+                                        printf("Client says : ");
+                                        puts(recv_buff); 
+
+                                        for(int i =1 ; i <= dir_contentcount[0]; i++)
                                         {
                                                 //printf("%s\n",ep1[i-1]->d_name);
-                                                strcat(dir_contents, strcat(ep1[i-1]->d_name, "\n"));
+                                                *(dir_contents + i - 1) = ep1[i-1]->d_name;
                                         }
                                         printf("Contents of the subfolder :\n ");
-                                        puts(dir_contents);
-                                        send(socketfd, dir_contents, strlen(dir_contents), 0); 
+                                        
+                                        
+                                        for(int cnt =0 ; cnt < dir_contentcount[0]; cnt++)
+                                        {
+                                                 
+                                                send(socketfd, dir_contents[cnt], 90, 0);
+
+                                                bzero(recv_buff, sizeof(recv_buff));
+                                                n = recv(socketfd, recv_buff, buff_max_size, 0);
+                                                printf("Client says : ");
+                                                puts(recv_buff); 
+
+
+                                        }
+
+
+
+                                        
 
                                 }
 
