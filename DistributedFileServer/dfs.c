@@ -416,78 +416,128 @@ void handle_request(int socketfd)
 
                                         else
                                         {
-                                                struct dirent **ep1;
-                                                char* dir_contents[500];
-                                                bzero(dir_contents, sizeof(dir_contents));
-                                                int dir_contentcount[30], count;
-                                                count = scandir(root_dir, &ep1, NULL, alphasort);
-                                                dir_contentcount[0] = count;
+                                        struct dirent **ep1;
+                                        char* dir_contents[500];
+                                        bzero(dir_contents, sizeof(dir_contents));
+                                        int dir_contentcount[30], count;
+                                        count = scandir(root_dir, &ep1, NULL, alphasort);
+                                        dir_contentcount[0] = count;
 
-                                                if(dir_contentcount[0] > 2)
+                                        if(dir_contentcount[0] > 2)
+                                        {
+                                                for(int g =0 ; g < dir_contentcount[0]; g++)
                                                 {
-                                                        for(int g =0 ; g < dir_contentcount[0]; g++)
+                                                        //printf("%s\n",ep1[i-1]->d_name);
+                                                        if( (strcmp(ep1[g]->d_name,".") != 0) || (strcmp(ep1[g]->d_name,"..") != 0) )
                                                         {
-                                                                //printf("%s\n",ep1[i-1]->d_name);
-                                                                if( (strcmp(ep1[g]->d_name,".") != 0) || (strcmp(ep1[g]->d_name,"..") != 0) )
+                                                                *(dir_contents + g) = ep1[g]->d_name;
+                                                
+                                                                if(strstr(*(dir_contents + g), fname1) != NULL)
                                                                 {
-                                                                        *(dir_contents + g) = ep1[g]->d_name;
+                                                                        file_presentflag = 1;
                                                 
-                                                                        if(strstr(*(dir_contents + g), fname1) != NULL)
+                                                                        printf("Requested file exists\n");
+                                                                        char *ret;
+                                                                        ret = strrchr(*(dir_contents + g),'.');
+                                                                        char str1[20];
+                                                                        strcpy(str1, ret+1);
+                                                                        found_version = atoi(str1);
+                                                                        printf("Found version : %d\n", found_version);
+                                                                        if(found_version == req_version)
                                                                         {
-                                                                                file_presentflag = 1;
-                                                
-                                                                                printf("Requested file exists\n");
-                                                                                char *ret;
-                                                                                ret = strrchr(*(dir_contents + g),'.');
-                                                                                char str1[20];
-                                                                                strcpy(str1, ret+1);
-                                                                                found_version = atoi(str1);
-                                                                                printf("Found version : %d\n", found_version);
-                                                                                if(found_version == req_version)
-                                                                                {
-                                                                                        version_presentflag=1;
-                                                                                        printf("Requested version exists\n");
+                                                                                version_presentflag=1;
+                                                                                printf("Requested version exists\n");
                                                                                 
-                                                                                        sprintf(dotfile,"/.%s.%d", fname1, req_version);
-                                                                                        strcat(root_dir,dotfile);
-                                                                                        FILE *ft;
+                                                                                sprintf(dotfile,"/.%s.%d", fname1, req_version);
+                                                                                strcat(root_dir,dotfile);
+                                                                                FILE *ft;
 
-                                                                                        ft = fopen(root_dir,"rb");
-                                                                                        if(ft != NULL){
+                                                                                ft = fopen(root_dir,"rb");
+                                                                                if(ft != NULL)
+                                                                                {
                                                                                         fseek(ft, 0 , SEEK_END);
                                                                                         f2_size = ftell(ft);
                                                                                         fseek(ft, 0 , SEEK_SET);
-                                                                                        fclose(ft);
-                                                                                        }
-                                                                                        bzero(fbuff3, sizeof(fbuff3));
-                                                                                        sprintf(fbuff3, "Available %d", f2_size);
-                                                                                        send(socketfd, fbuff3, strlen(fbuff3),0);
 
-                                                                                        bzero(recv_buff, sizeof(recv_buff));
-                                                                                        int re = recv(socketfd, recv_buff, 100, 0);
-
-                                                                                        printf("Client says : ");
-                                                                                        puts(recv_buff);
-
-                                                                                        fbuff2 = (char*)calloc(buff_max_size,sizeof(char));
-                                                                                        if(fbuff2 == NULL) printf("fbuff2 mem not allocated\n\n");
-                                                                                        ft = fopen(root_dir,"rb");
-                                                                                        if(ft != NULL){
-                                                                                        int arr= fread(fbuff2, sizeof(char), f2_size, ft);
-
-                                                                                        if(arr < 0)
-                                                                                        {
-                                                                                                printf("File not read");
-                                                                                                send(socketfd,"File not read",13,0);
-                                                                                        }
-                                                                                        else send(socketfd,fbuff2,f2_size,0);
-                                                                                        fclose(ft);
-
-                                                                                        }
-                                                                                        free(fbuff2);
-                                                                                        break;
-                                                                                                                                                   
                                                                                 }
+                                                                                 fclose(ft);
+       
+                                                                                bzero(fbuff3, sizeof(fbuff3));
+                                                                                sprintf(fbuff3, "Available %d", f2_size);
+                                                                                send(socketfd, fbuff3, strlen(fbuff3),0);
+
+                                                                                bzero(recv_buff, sizeof(recv_buff));
+                                                                                int re = recv(socketfd, recv_buff, 100, 0);
+
+                                                                                printf("Client says : ");
+                                                                                puts(recv_buff);
+
+                                                                                fbuff2 = (char*)calloc(buff_max_size,sizeof(char));
+                                                                                if(fbuff2 == NULL) printf("fbuff2 mem not allocated\n\n");
+                                                                                ft = fopen(root_dir,"rb");
+                                                                                       
+                                                                                 if(ft != NULL)
+                                                                                 {
+                                                                                        if(f2_size > buff_max_size)
+                                                                                        {
+                                                                                        int an =1,div = f2_size/buff_max_size;
+                                                                                        int per = f2_size%buff_max_size;
+                                                                                        n=0,n2=0;
+                                                                                        while(n2<f2_size)
+                                                                                        {
+
+                                                                                                if(an <= div)
+                                                                                                {
+                                                                                                int arr=fread(fbuff2, sizeof(char), buff_max_size, ft);
+                                                                                                        if(arr < 0)
+                                                                                                        {
+                                                                                                        printf("File not read");
+                                                                                                        send(socketfd,"File not read",13,0);
+                                                                                                        }
+                                                                                                        else n = send(socketfd,fbuff2,buff_max_size,0);
+
+                                                                                                memset(fbuff2, 0, sizeof(fbuff2));
+                                                                                                n2 = n2 +n;
+                                                                                                an++;
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                int arr = fread(fbuff2, sizeof(char), per, ft);
+                                                                                                        if(arr < 0)
+                                                                                                        {
+                                                                                                        printf("File not read");
+                                                                                                        send(socketfd,"File not read",13,0);
+                                                                                                        }
+                                                                                                        else n = send(socketfd,fbuff2,per,0);
+
+                                                                                                memset(fbuff2, 0, sizeof(fbuff2));
+                                                                                                n2 = n2 +n;
+                                                                                                an++;
+                                                                                                }
+                                                                                        } 
+                                                                                        printf(" ******** buf1 > 90000, total sent, n2 : %d\n\n", n2);
+
+                                                                                        }      
+                                                                                        
+                                                                                        else
+                                                                                        {
+                                                                                              
+                                                                                                n=0,n2=0;
+                                                                                                int jk = fread(fbuff2, sizeof(char), f2_size, ft);
+                                                                                                n = send(socketfd, fbuff2, f2_size, 0);
+                                                                                                memset(fbuff2, 0, sizeof(fbuff2));
+                                                                                                
+
+                                                                                        }
+                                                                                        
+                                                                                } else printf("File couldnt read");        
+                                                                                fclose(ft);
+                                                                                free(fbuff2);
+                                                                                break;
+                                                                                        
+                                                                               } // found ver == req_ver
+                                                                                                                                           
+                                                                                
 
                                                                         }
 

@@ -16,7 +16,7 @@
 #define SERV_PORT 3000
 #define buff_max_size 90000
 
-FILE *conf, *fi, *fop, *fop1;
+FILE *conf, *fi, *fop, *fop1, *fr;
 char dfc_conf[30], *conf_buffer, username[20], password[20], cmd[60], req_method[30], cmd1[60];
 char filename[30], send_buff[buff_max_size], subfolder[60], rec_buff1[buff_max_size], des[buff_max_size];
 char *fbuff1, *fbuff2, *fbuff3, *fbuff4, *f1, *f2, *f3, *f4;
@@ -296,7 +296,9 @@ void extract_ports(char *buff1, int i)
 void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int suffix1, char *buf2, int suffix2, char *Username, char *Password, char *req_type, char *sub_f)
 {
         int rec, len1, len2, n, n2;
-        char fname1[30], fname2[30], rec_buff[90];
+        char fname1[30], fname2[30], rec_buff[90], key[90], enc[buff_max_size];
+        int key_len=strlen(Password);
+        strncpy(key, Password, key_len);
         bzero(rec_buff, sizeof(rec_buff));
 
         sprintf(fname1, ".%s.%d", filename, suffix1);
@@ -309,7 +311,7 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
 
         sprintf(send_buff,"%s %s %s %d %s %d %s %s %d ", req_type, sub_f, fname1, len1, fname2, len2, Username, Password, server_no);
         //puts(send_buff);
-                printf("Coming here 0\n\n");
+
         send(socketfd, send_buff, strlen(send_buff), 0);
 
 
@@ -328,7 +330,7 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
                         fop = fopen(buf1, "rb");
                         if(fop != NULL)
                         {
-                                printf("Coming here 1\n\n");
+
                                 int an =1,div = len1/buff_max_size;
                                 int per = len1%buff_max_size;
                                 n=0,n2=0;
@@ -338,16 +340,28 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
                                         if(an <= div)
                                         {
                                                 int jk = fread(des, sizeof(char), buff_max_size, fop);
-                                                n = send(socketfd, des, buff_max_size, 0);
+                                                for(int l=0; l<buff_max_size; l++)
+                                                {
+                                                        enc[l] = des[l]^key[l%(key_len)];
+
+                                                }
+                                                n = send(socketfd, enc, buff_max_size, 0);
                                                 memset(des, 0, sizeof(des));
+                                                memset(enc, 0, sizeof(enc));
                                                 n2 = n2 +n;
                                                 an++;
                                         }
                                         else
                                         {
-                                                 int jk = fread(des, sizeof(char), per, fop);
-                                                n = send(socketfd, des, per, 0);
+                                                int jk = fread(des, sizeof(char), per, fop);
+                                                for(int l=0; l<per; l++)
+                                                {
+                                                        enc[l] = des[l]^key[l%(key_len)];
+
+                                                }
+                                                n = send(socketfd, enc, per, 0);
                                                 memset(des, 0, sizeof(des));
+                                                memset(enc, 0, sizeof(enc));
                                                 n2 = n2 +n;
                                                 an++;
                                         }
@@ -364,8 +378,15 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
                                 n=0,n2=0;
                                 
                                 int jk = fread(des, sizeof(char), len1, fop);
-                                n = send(socketfd, des, len1, 0);
+                                                for(int l=0; l<len1; l++)
+                                                {
+                                                        enc[l] = des[l]^key[l%(key_len)];
+                                                       
+
+                                                }
+                                n = send(socketfd, enc, len1, 0);
                                 memset(des, 0, sizeof(des));
+                                memset(enc, 0, sizeof(enc));
                                 
 
                         }
@@ -395,16 +416,30 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
                                                 if(an <= div)                                                
                                                 {
                                                 int jk = fread(des, sizeof(char), buff_max_size, fop1);
-                                                n = send(socketfd, des, buff_max_size, 0);
+                                                for(int l=0; l<buff_max_size; l++)
+                                                {
+                                                        enc[l] = des[l]^key[l%(key_len)];
+                                                  
+
+                                                }
+                                                n = send(socketfd, enc, buff_max_size, 0);
                                                 memset(des, 0, sizeof(des));
+                                                memset(enc, 0, sizeof(enc));
                                                 n2 = n2 +n;
                                                 an++;
                                                 }
                                                 else
                                                 {
-                                                        int jk = fread(des, sizeof(char), per, fop1);
-                                                n = send(socketfd, des, per, 0);
+                                                int jk = fread(des, sizeof(char), per, fop1);
+                                                for(int l=0; l<per; l++)
+                                                {
+                                                        enc[l] = des[l]^key[l%(key_len)];
+
+
+                                                }
+                                                n = send(socketfd, enc, per, 0);
                                                 memset(des, 0, sizeof(des));
+                                                memset(enc, 0, sizeof(enc));
                                                 n2 = n2 +n;
                                                 }
                                         } 
@@ -420,7 +455,12 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
                                 n=0,n2=0;
                                        
                                         int jk = fread(des, sizeof(char), len2, fop1);
-                                        n = send(socketfd, des, len2, 0);
+                                        for(int l=0; l<len2; l++)
+                                                {
+                                                        enc[l] = des[l]^key[l%(key_len)];
+
+                                                }
+                                        n = send(socketfd, enc, len2, 0);
                                         memset(des, 0, sizeof(des));
                                         
                                 }
@@ -601,7 +641,7 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
 
                         /******************************      GET routine     *********************************/
 
-void get_version(int socketfd, char *file_name1, char *sub_folder, char *Username, char *Password, int version_no, int server_no)
+void get_version(int socketfd, char *file_name1, char *sub_folder, char *Username, char *Password, int version_no, int server_no, char *temp)
 {
 
         char decrypt[buff_max_size];        
@@ -657,48 +697,112 @@ void get_version(int socketfd, char *file_name1, char *sub_folder, char *Usernam
                         sprintf(send_buff, "Send file part");
                         send(socketfd, send_buff, strlen(send_buff), 0);
 
+
                         bzero(rec_buff1, sizeof(rec_buff1));
-                        int rec= recv(socketfd, rec_buff1, fsize_1, 0);
-
-
-                        if(version_no == 1)
-                        {       
-                                for(int l=0; l<fsize_1; l++)
-                                {
-                                        f_ver1[l] = rec_buff1[l]^key1[l%(key_len)];
-
-                                }
+                        //int rec= recv(socketfd, rec_buff1, fsize_1, 0);
+                        
+                        if(version_no != 4)
+                        {
+                                FILE *fp1;
                                 
+                                fp1 = fopen(temp, "wb");
+                                        
+                                if(fp1 != NULL)
+                                {
+                                        if(fsize_2 > buff_max_size)
+                                        {
+                                        int an =1,div = fsize_2/buff_max_size;
+                                        int per = fsize_2%buff_max_size;
+                                        int n=0,n2=0;
+
+                                        while(n2<fsize_2)
+                                        {
+                                                n = recv(socketfd, rec_buff1, buff_max_size, 0);
+                                                for(int l=0; l<buff_max_size; l++)
+                                                {
+                                                        decrypt[l] = rec_buff1[l]^key1[l%(key_len)];
+
+                                                }
+                                                fwrite(decrypt, n, 1, fp1);
+                                                bzero(rec_buff1, sizeof(rec_buff1));
+                                                bzero(decrypt, sizeof(decrypt));
+                                                n2 = n2 + n;
+
+                                        }
+                                        printf("Written %d bytes for %d\n", n2, version_no);
+                                        }
+
+                                        else
+                                        {
+                                        int n = recv(socketfd, rec_buff1, fsize_2, 0);
+                                                for(int l=0; l<fsize_2; l++)
+                                                {
+                                                        decrypt[l] = rec_buff1[l]^key1[l%(key_len)];
+
+                                                }       
+                                        fwrite(decrypt, n, 1, fp1);
+                                        bzero(rec_buff1, sizeof(rec_buff1));
+                                        bzero(decrypt, sizeof(decrypt));
+
+                                        }
+                                }
+                                else printf("GET function file not written");
+                                fclose(fp1);
+                        }
+
+                        else
+                        {
+
+                                FILE *fs1;
                                 
-                        }
-
-                        else if(version_no == 2)
-                        {
-                                for(int l=0; l<fsize_1; l++)
+                                fs1 = fopen(temp, "wb");
+                                        
+                                if(fs1 != NULL)
                                 {
-                                        f_ver2[l] = rec_buff1[l]^key1[l%(key_len)];
+                                        if(fsize_4 > buff_max_size)
+                                        {
+                                        int an =1,div = fsize_4/buff_max_size;
+                                        int per = fsize_4%buff_max_size;
+                                        int n=0,n2=0;
 
+                                        while(n2<fsize_4)
+                                        {
+                                                n = recv(socketfd, rec_buff1, buff_max_size, 0);
+                                                for(int l=0; l<buff_max_size; l++)
+                                                {
+                                                        decrypt[l] = rec_buff1[l]^key1[l%(key_len)];
+
+                                                }
+                                                fwrite(decrypt, n, 1, fs1);
+                                                bzero(rec_buff1, sizeof(rec_buff1));
+                                                bzero(decrypt, sizeof(decrypt));
+                                                n2 = n2 + n;
+
+                                        }
+                                        printf("Written %d bytes for %d\n", n2, version_no);
+                                        }
+
+                                        else
+                                        {
+                                        int n = recv(socketfd, rec_buff1, fsize_4, 0);
+                                                for(int l=0; l<fsize_4; l++)
+                                                {
+                                                        decrypt[l] = rec_buff1[l]^key1[l%(key_len)];
+
+                                                }
+                                        fwrite(decrypt, n, 1, fs1);
+                                        bzero(rec_buff1, sizeof(rec_buff1));
+                                                bzero(decrypt, sizeof(decrypt));
+
+                                        }
                                 }
+                                else printf("GET function file not written");
+                                fclose(fs1);
+
+
+
                         }
-
-                        else if(version_no == 3)
-                        {
-                                for(int l=0; l<fsize_1; l++)
-                                {
-                                        f_ver3[l] = rec_buff1[l]^key1[l%(key_len)];
-
-                                }
-                        }
-                                  
-                        else if(version_no == 4)
-                        {
-                                for(int l=0; l<fsize_1; l++)
-                                {
-                                        f_ver4[l] = rec_buff1[l]^key1[l%(key_len)];
-
-                                }
-                        }
-
+        
 
 
                         version_obtainedflag |= 1 << version_no;
@@ -932,17 +1036,7 @@ int main(int argc, char **argv)
                                                 f_ver1 = (char*) calloc(buff_max_size , sizeof(char));
                                                 if(f_ver1 == NULL) printf("No memory alloc 1\n");
                 
-                                                f_ver2 = (char*) calloc(buff_max_size , sizeof(char));
-                                                if(f_ver2 == NULL) printf("No memory alloc 2\n");
-
-                                                f_ver3 = (char*) calloc(buff_max_size , sizeof(char));
-                                                if(f_ver3 == NULL) printf("No memory alloc 3\n");
-
-                                                f_ver4 = (char*) calloc(buff_max_size , sizeof(char));
-                                                if(f_ver4 == NULL) printf("No memory alloc 4\n");
                                                 
-
-
                                                 version_obtainedflag=0;
 
                                                 req_ver4 =0;
@@ -954,19 +1048,19 @@ int main(int argc, char **argv)
                                                 {       
                                                 if(server_num == 1)
                                                 {
-                                                        if(server1_down_flag == 0) get_version(sockfd1, filename, subfolder, username, password, 1, server_num);
+                                                        if(server1_down_flag == 0) get_version(sockfd1, filename, subfolder, username, password, 1, server_num, "fp1");
                                                 }
                                                  else if(server_num == 2)
                                                 {
-                                                        if(server2_down_flag == 0) get_version(sockfd2, filename, subfolder, username, password, 1, server_num);
+                                                        if(server2_down_flag == 0) get_version(sockfd2, filename, subfolder, username, password, 1, server_num, "fp1");
                                                 }
                                                 else if(server_num == 3)
                                                 {
-                                                         if(server3_down_flag == 0) get_version(sockfd3, filename, subfolder,username, password, 1, server_num);
+                                                         if(server3_down_flag == 0) get_version(sockfd3, filename, subfolder,username, password, 1, server_num, "fp1");
                                                 }
                                                 else if(server_num == 4)
                                                 {
-                                                        if(server4_down_flag == 0) get_version(sockfd4, filename, subfolder, username, password, 1, server_num);
+                                                        if(server4_down_flag == 0) get_version(sockfd4, filename, subfolder, username, password, 1, server_num, "fp1");
                                                 }
                                                 
                                                         server_num++;
@@ -984,7 +1078,7 @@ int main(int argc, char **argv)
                                                         if(server1_down_flag == 0)
                                                         {
                                                                 connect_server1();                
-                                                                get_version(sockfd1, filename, subfolder, username, password, 2, server_num);
+                                                                get_version(sockfd1, filename, subfolder, username, password, 2, server_num, "fp2");
                                                                 close(sockfd1);
                                                         }
                                                 }
@@ -993,7 +1087,7 @@ int main(int argc, char **argv)
                                                         if(server2_down_flag == 0)
                                                         {
                                                                 connect_server2();                
-                                                                get_version(sockfd2, filename, subfolder, username, password, 2, server_num);
+                                                                get_version(sockfd2, filename, subfolder, username, password, 2, server_num, "fp2");
                                                                 close(sockfd2);
                                                         }
                                                 }
@@ -1002,7 +1096,7 @@ int main(int argc, char **argv)
                                                         if(server3_down_flag == 0)
                                                         {
                                                                 connect_server3();                
-                                                                get_version(sockfd3, filename, subfolder, username, password, 2, server_num);
+                                                                get_version(sockfd3, filename, subfolder, username, password, 2, server_num, "fp2");
                                                                 close(sockfd3);
                                                         }
                                                 }
@@ -1011,7 +1105,7 @@ int main(int argc, char **argv)
                                                        if(server4_down_flag == 0)
                                                         {
                                                                 connect_server4();                
-                                                                get_version(sockfd4, filename, subfolder, username, password, 2, server_num);
+                                                                get_version(sockfd4, filename, subfolder, username, password, 2, server_num, "fp2");
                                                                 close(sockfd4);
                                                         }
                                                 }
@@ -1034,7 +1128,7 @@ int main(int argc, char **argv)
                                                         if(server1_down_flag == 0)
                                                         {
                                                                 connect_server1();                
-                                                                get_version(sockfd1, filename, subfolder, username, password, 3, server_num);
+                                                                get_version(sockfd1, filename, subfolder, username, password, 3, server_num, "fp3");
                                                                 close(sockfd1);
                                                         }
                                                 }
@@ -1043,7 +1137,7 @@ int main(int argc, char **argv)
                                                         if(server2_down_flag == 0)
                                                         {
                                                                 connect_server2();                
-                                                                get_version(sockfd2, filename, subfolder, username, password, 3, server_num);
+                                                                get_version(sockfd2, filename, subfolder, username, password, 3, server_num, "fp3");
                                                                 close(sockfd2);
                                                         }
                                                 }
@@ -1052,7 +1146,7 @@ int main(int argc, char **argv)
                                                          if(server3_down_flag == 0)
                                                         {
                                                                 connect_server3();                
-                                                                get_version(sockfd3, filename, subfolder, username, password, 3, server_num);
+                                                                get_version(sockfd3, filename, subfolder, username, password, 3, server_num, "fp3");
                                                                 close(sockfd3);
                                                         }
                                                 }
@@ -1061,7 +1155,7 @@ int main(int argc, char **argv)
                                                         if(server4_down_flag == 0)
                                                         {
                                                                 connect_server4();                
-                                                                get_version(sockfd4, filename, subfolder, username, password, 3, server_num);
+                                                                get_version(sockfd4, filename, subfolder, username, password, 3, server_num, "fp3");
                                                                 close(sockfd4);
                                                         }
                                                 }
@@ -1083,7 +1177,7 @@ int main(int argc, char **argv)
                                                         if(server1_down_flag == 0)
                                                         {
                                                                 connect_server1();                
-                                                                get_version(sockfd1, filename, subfolder, username, password, 4, server_num);
+                                                                get_version(sockfd1, filename, subfolder, username, password, 4, server_num, "fp4");
                                                                 close(sockfd1);
                                                         }
                                                 }
@@ -1092,7 +1186,7 @@ int main(int argc, char **argv)
                                                         if(server2_down_flag == 0)
                                                         {
                                                                 connect_server2();                
-                                                                get_version(sockfd2, filename, subfolder, username, password, 4, server_num);
+                                                                get_version(sockfd2, filename, subfolder, username, password, 4, server_num, "fp4");
                                                                 close(sockfd2);
                                                         }
                                                 }
@@ -1101,7 +1195,7 @@ int main(int argc, char **argv)
                                                          if(server3_down_flag == 0)
                                                         {
                                                                 connect_server3();                
-                                                                get_version(sockfd3, filename, subfolder, username, password, 4, server_num);
+                                                                get_version(sockfd3, filename, subfolder, username, password, 4, server_num, "fp4");
                                                                 close(sockfd3);
                                                         }
                                                 }
@@ -1110,7 +1204,7 @@ int main(int argc, char **argv)
                                                         if(server4_down_flag == 0)
                                                         {
                                                                 connect_server4();                
-                                                                get_version(sockfd4, filename, subfolder, username, password, 4, server_num);
+                                                                get_version(sockfd4, filename, subfolder, username, password, 4, server_num, "fp4");
                                                                 close(sockfd4);
                                                         }
                                                 }
@@ -1128,22 +1222,183 @@ int main(int argc, char **argv)
 
                                 
                                                                 fi = fopen(usr_dir, "wb");
+                                                                
                                                                 if(fi != NULL)
                                                                 {
                                                                         fseek(fi, 0, SEEK_SET);
-                                                                        fwrite(f_ver1, fsize_2, 1, fi);
+                                                                        fr = fopen("fp1", "rb");
+                                                                        if(fr != NULL)
+                                                                        {
+                                                                                if(fsize_2 > buff_max_size)
+                                                                                {
+                                                                                 int an =1,div = fsize_2/buff_max_size;
+                                                                                 int per = fsize_2%buff_max_size;
+                                                                                 int n=0,n2=0;       
+                        
+                                                                                        while(n2<fsize_2)
+                                                                                        {
+
+                                                                                                if(an <= div)
+                                                                                                {
+                                                                                                fread(f_ver1, sizeof(char), buff_max_size, fr);
+                                                                                                fwrite(f_ver1, buff_max_size, 1, fi);
+                                                                                                memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                                n2 = n2 + buff_max_size;
+                                                                                                an++;
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                fread(f_ver1, sizeof(char), per, fr);
+                                                                                                fwrite(f_ver1, per, 1, fi);
+                                                                                                memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                                n2 = n2 + per;
+                                                                                                an++;
+                                                                                                }
+                                                                                        } 
+
+                                                                                        
+
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                        fread(f_ver1, fsize_2, 1, fr);
+                                                                                        fwrite(f_ver1, fsize_2, 1, fi);
+                                                                                        memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                }
+                                                                        }
+                                                                        fclose(fr);
 
                                                                         fseek(fi, 0, SEEK_SET);
                                                                         fseek(fi, fsize_2, SEEK_SET);
-                                                                        fwrite(f_ver2, fsize_2, 1, fi);
+                                                                        fr = fopen("fp2", "rb");
+                                                                        if(fr != NULL)
+                                                                        {
+                                                                                if(fsize_2 > buff_max_size)
+                                                                                {
+                                                                                 int an =1,div = fsize_2/buff_max_size;
+                                                                                 int per = fsize_2%buff_max_size;
+                                                                                 int n=0,n2=0;       
+                        
+                                                                                        while(n2<fsize_2)
+                                                                                        {
+
+                                                                                                if(an <= div)
+                                                                                                {
+                                                                                                fread(f_ver1, sizeof(char), buff_max_size, fr);
+                                                                                                fwrite(f_ver1, buff_max_size, 1, fi);
+                                                                                                memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                                n2 = n2 + buff_max_size;
+                                                                                                an++;
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                fread(f_ver1, sizeof(char), per, fr);
+                                                                                                fwrite(f_ver1, per, 1, fi);
+                                                                                                memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                                n2 = n2 + per;
+                                                                                                an++;
+                                                                                                }
+                                                                                        } 
+
+                                                                                        
+
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                        fread(f_ver1, fsize_2, 1, fr);
+                                                                                        fwrite(f_ver1, fsize_2, 1, fi);
+                                                                                        memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                }
+                                                                        }
+                                                                        fclose(fr);
 
                                                                         fseek(fi, 0, SEEK_SET);
                                                                         fseek(fi, (2*fsize_2), SEEK_SET);
-                                                                        fwrite(f_ver3, fsize_2, 1, fi);
+                                                                        fr = fopen("fp3", "rb");
+                                                                        if(fr != NULL)
+                                                                        {
+                                                                                if(fsize_2 > buff_max_size)
+                                                                                {
+                                                                                 int an =1,div = fsize_2/buff_max_size;
+                                                                                 int per = fsize_2%buff_max_size;
+                                                                                 int n=0,n2=0;       
+                        
+                                                                                        while(n2<fsize_2)
+                                                                                        {
+
+                                                                                                if(an <= div)
+                                                                                                {
+                                                                                                fread(f_ver1, sizeof(char), buff_max_size, fr);
+                                                                                                fwrite(f_ver1, buff_max_size, 1, fi);
+                                                                                                memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                                n2 = n2 + buff_max_size;
+                                                                                                an++;
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                fread(f_ver1, sizeof(char), per, fr);
+                                                                                                fwrite(f_ver1, per, 1, fi);
+                                                                                                memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                                n2 = n2 + per;
+                                                                                                an++;
+                                                                                                }
+                                                                                        } 
+
+                                                                                        
+
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                        fread(f_ver1, fsize_2, 1, fr);
+                                                                                        fwrite(f_ver1, fsize_2, 1, fi);
+                                                                                        memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                }
+                                                                        }
+                                                                        fclose(fr);
 
                                                                         fseek(fi, 0, SEEK_SET);
                                                                         fseek(fi, (3*fsize_2), SEEK_SET);
-                                                                        fwrite(f_ver4, fsize_4, 1, fi);
+                                                                        fr = fopen("fp4", "rb");
+                                                                        if(fr != NULL)
+                                                                        {
+                                                                                if(fsize_4 > buff_max_size)
+                                                                                {
+                                                                                 int an =1,div = fsize_4/buff_max_size;
+                                                                                 int per = fsize_4%buff_max_size;
+                                                                                 int n=0,n2=0;       
+                        
+                                                                                        while(n2<fsize_4)
+                                                                                        {
+
+                                                                                                if(an <= div)
+                                                                                                {
+                                                                                                fread(f_ver1, sizeof(char), buff_max_size, fr);
+                                                                                                fwrite(f_ver1, buff_max_size, 1, fi);
+                                                                                                memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                                n2 = n2 + buff_max_size;
+                                                                                                an++;
+                                                                                                }
+                                                                                                else
+                                                                                                {
+                                                                                                fread(f_ver1, sizeof(char), per, fr);
+                                                                                                fwrite(f_ver1, per, 1, fi);
+                                                                                                memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                                n2 = n2 + per;
+                                                                                                an++;
+                                                                                                }
+                                                                                        } 
+
+                                                                                        
+
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                        fread(f_ver1, fsize_4, 1, fr);
+                                                                                        fwrite(f_ver1, fsize_4, 1, fi);
+                                                                                        memset(f_ver1, 0, sizeof(f_ver1));
+                                                                                }
+                                                                        }
+                                                                        fclose(fr);
 
                                                                         fclose(fi);
                                                                  }
@@ -1156,9 +1411,14 @@ int main(int argc, char **argv)
                                                         fsize_3 =0;
                                                         fsize_4 =0;
                                                         free(f_ver1);
-                                                        free(f_ver2);
-                                                        free(f_ver3);
-                                                        free(f_ver4);
+                                                        var=1;        
+                                                        while(var < 5)
+                                                        {
+                                                        sprintf(cmd1 , "rm fp%d", var);
+                                                        system(cmd1);
+                                                        var++;
+                                                        }
+                                                        var=1;
                                                         
                                                 }
         
