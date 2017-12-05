@@ -32,7 +32,7 @@ int svar=0, ver_num=0, sumofvers=0;
 char usr_dir[80];
 
 
-int server_upflag;
+int server_upflag, server1_down_flag, server2_down_flag, server3_down_flag, server4_down_flag;
 int version_obtainedflag;
 int req_ver4 = 0;
 
@@ -68,7 +68,7 @@ void store_version(char *str)
         char file1[100], dn[100];
         char vers;
         char *tok;
-        puts(str);
+
         bzero(file1, sizeof(file1));
         strncpy(dn, str, strlen(str));
         tok = strtok(dn, ".");
@@ -81,9 +81,9 @@ void store_version(char *str)
         //printf(" %d file :%s\n ", svar, fv[svar].file_name);
         tok = strtok(NULL, "\n");
         vers = atoi(tok);
-        printf(" ********************* vers : %d\n", vers);
+        //printf(" ********************* vers : %d\n", vers);
         fv[svar].version = vers;
-        printf(" %d file :%d\n ", svar, fv[svar].version);
+        //printf(" %d file :%d\n ", svar, fv[svar].version);
         svar++;
         
         
@@ -241,7 +241,7 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
                                                 {
                                                         bzero(rec_buff1, sizeof(rec_buff1));
                                                         int rec = recv(socketfd, rec_buff1, 90, 0);
-                                                        puts(rec_buff1);
+
                                                         if(h>1)
                                                         {
                                                                 int le = strlen(rec_buff1);
@@ -325,6 +325,8 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
 void get_version(int socketfd, char *file_name1, char *sub_folder, char *Username, char *Password, int version_no, int server_no)
 {
 
+
+    
         char decrypt[buff_max_size];        
         bzero(decrypt, sizeof(decrypt));
         char key1[100];
@@ -354,6 +356,11 @@ void get_version(int socketfd, char *file_name1, char *sub_folder, char *Usernam
                                         
                        
                 } else printf(" Socket %d down\n", server_no);
+
+                if(server_no == 1) server1_down_flag = 1; 
+                else if(server_no == 2) server2_down_flag = 1;
+                else if(server_no == 3) server3_down_flag = 1; 
+                else if(server_no == 4) server4_down_flag = 1;  
         }
 
         else
@@ -437,6 +444,10 @@ void get_version(int socketfd, char *file_name1, char *sub_folder, char *Usernam
                        puts(rec_buff1);
                 }
 
+                else if(strncmp(rec_buff1, "Version", 7 )==0)
+                {
+
+                }
                 else puts(rec_buff1);
 
 
@@ -510,7 +521,10 @@ int main(int argc, char **argv)
         }
 
         server_upflag=0;
-
+        server1_down_flag=0; 
+        server2_down_flag=0;                                                
+        server3_down_flag=0;                                                
+        server3_down_flag=0;                                                                                               
         
         //Creation of the socket
        if ((sockfd1 = socket (AF_INET, SOCK_STREAM, 0)) <0) {
@@ -593,7 +607,7 @@ int main(int argc, char **argv)
                 printf(" *-*-*-*-*-*-*-  The following commands are handled by the DFC :    *-*-*-*-*-*-*-\n");
                 printf("                1. LIST/list subfolder : lists files stored at the server ofr a given username \n ");
                 printf("               2. PUT/put filename subfolder: Sends a file to the distributed servers\n");
-                printf("                3. GET/get filename subfolder: Retrieves a file from the distributed servers\n\n\r ");
+                printf("                3. GET/get filename subfolder: Retrieves a file from the distributed servers\n ");
                 printf("                4. MKDIR/mkdir subfolder : Makes a subfolder on all servers\n\n\r ");
 
 
@@ -669,6 +683,8 @@ int main(int argc, char **argv)
 
                                         else if( (strncmp(req_method, "GET", 3) == 0 ) || (strncmp(req_method, "get", 3) == 0 ) )
                                         {
+
+
                                                 bzero(f_ver1, sizeof(f_ver1));
                                                 bzero(f_ver2, sizeof(f_ver2));
                                                 bzero(f_ver3, sizeof(f_ver3));
@@ -676,6 +692,8 @@ int main(int argc, char **argv)
                                                 version_obtainedflag=0;
 
                                                 req_ver4 =0;
+        /*****  Check if server is down, if already found down, probing the same server again causes the program to exit    *****/
+
 
                                                 int server_num = 1;      
                                                 do
@@ -691,10 +709,22 @@ int main(int argc, char **argv)
                                                 server_num = 1;      
                                                 do
                                                 {       
-                                                if(server_num == 1) get_version(sockfd1, filename, subfolder, username, password, 2, server_num);
-                                                else if(server_num == 2) get_version(sockfd2, filename, subfolder, username, password, 2, server_num);
-                                                else if(server_num == 3) get_version(sockfd3, filename, subfolder, username, password, 2, server_num);
-                                                else if(server_num == 4) get_version(sockfd4, filename, subfolder, username, password, 2, server_num);
+                                                if(server_num == 1)
+                                                {
+                                                        if(server1_down_flag == 0) get_version(sockfd1, filename, subfolder, username, password, 2, server_num);
+                                                }
+                                                else if(server_num == 2)
+                                                {
+                                                        if(server2_down_flag == 0) get_version(sockfd2, filename, subfolder, username, password, 2, server_num);
+                                                }
+                                                else if(server_num == 3)
+                                                {
+                                                         if(server3_down_flag == 0) get_version(sockfd3, filename, subfolder, username, password, 2, server_num);
+                                                }
+                                                else if(server_num == 4)
+                                                {
+                                                        if(server4_down_flag == 0) get_version(sockfd4, filename, subfolder, username, password, 2, server_num);
+                                                }
                                                 server_num++;
 
 
@@ -703,10 +733,22 @@ int main(int argc, char **argv)
                                                 server_num = 1;      
                                                 do
                                                 {       
-                                                if(server_num == 1) get_version(sockfd1, filename, subfolder, username, password, 3, server_num);
-                                                else if(server_num == 2) get_version(sockfd2, filename, subfolder, username, password, 3, server_num);
-                                                else if(server_num == 3) get_version(sockfd3, filename, subfolder, username, password, 3, server_num);
-                                                else if(server_num == 4) get_version(sockfd4, filename, subfolder, username, password, 3, server_num);
+                                                if(server_num == 1)
+                                                {
+                                                        if(server1_down_flag == 0) get_version(sockfd1, filename, subfolder, username, password, 3, server_num);
+                                                }
+                                                else if(server_num == 2)
+                                                {
+                                                        if(server2_down_flag == 0) get_version(sockfd2, filename, subfolder, username, password, 3, server_num);
+                                                }
+                                                else if(server_num == 3)
+                                                {
+                                                         if(server3_down_flag == 0) get_version(sockfd3, filename, subfolder, username, password, 3, server_num);
+                                                }
+                                                else if(server_num == 4)
+                                                {
+                                                        if(server4_down_flag == 0) get_version(sockfd4, filename, subfolder, username, password, 3, server_num);
+                                                }
                                                 server_num++;
 
                                                 }while( (version_obtainedflag <= 7) && (server_num <5));
@@ -714,10 +756,22 @@ int main(int argc, char **argv)
                                                 server_num = 1;      
                                                 do
                                                 {       
-                                                if(server_num == 1) get_version(sockfd1, filename, subfolder, username, password, 4, server_num);
-                                                else if(server_num == 2) get_version(sockfd2, filename, subfolder, username, password, 4, server_num);
-                                                else if(server_num == 3) get_version(sockfd3, filename, subfolder, username, password, 4, server_num);
-                                                else if(server_num == 4) get_version(sockfd4, filename, subfolder, username, password, 4, server_num);
+                                                if(server_num == 1)
+                                                {
+                                                        if(server1_down_flag == 0) get_version(sockfd1, filename, subfolder, username, password, 4, server_num);
+                                                }
+                                                else if(server_num == 2)
+                                                {
+                                                        if(server2_down_flag == 0) get_version(sockfd2, filename, subfolder, username, password, 4, server_num);
+                                                }
+                                                else if(server_num == 3)
+                                                {
+                                                         if(server3_down_flag == 0) get_version(sockfd3, filename, subfolder, username, password, 4, server_num);
+                                                }
+                                                else if(server_num == 4)
+                                                {
+                                                        if(server4_down_flag == 0) get_version(sockfd4, filename, subfolder, username, password, 4, server_num);
+                                                }
                                                 server_num++;
                                                 req_ver4 = 1;
                                                 }while( (version_obtainedflag <= 15) && (server_num <5));
@@ -753,7 +807,7 @@ int main(int argc, char **argv)
                                                                  }
                                                         }
                                                                                                                       
-                                                        else printf("Not obtained, %d\n\n", version_obtainedflag);
+                                                        else printf("File is not constructable, %d\n\n", version_obtainedflag);
 
                                                         fsize_1 =0;
                                                         fsize_2 =0;
@@ -797,11 +851,11 @@ int main(int argc, char **argv)
                                         int yu =0;
                                         yu = DFS1_count[0] +  DFS2_count[0] +  DFS3_count[0] +  DFS4_count[0];
                                         yu = yu - (2*server_upflag);      
-                                                        for(int m=0; m<yu; m++)             // 2 dirs escaped in each DFS : . & ..
+                                                        /*for(int m=0; m<yu; m++)             // 2 dirs escaped in each DFS : . & ..
                                                         {
                                                         printf(" Structur %d has file %s and version %d\n", m, fv[m].file_name, fv[m].version);
 
-                                                        } 
+                                                        }*/
                                         int m,a;
                 
                                                 /****  From the array of structures, each struct where all filenames received from DFSs are save, 
@@ -853,7 +907,7 @@ int main(int argc, char **argv)
                                         }
 
                                         svar=0;
-                                        server_upflag=0;
+
 
                                 }       // if req_method = LIST
 
