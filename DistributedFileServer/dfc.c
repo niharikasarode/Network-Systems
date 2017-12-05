@@ -22,11 +22,16 @@ char filename[30], send_buff[buff_max_size], subfolder[60], rec_buff1[buff_max_s
 char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
 char *DFS1_list[99],*DFS2_list[99], *DFS3_list[99], *DFS4_list[99];
 int DFS1_count[10], DFS2_count[10], DFS3_count[10], DFS4_count[10];
-int port[4], b_size[4], chunk_size,rem_size;
+int port[4], b_size[4], chunk_size,rem_size, req_version;
 int sockfd1, sockfd2, sockfd3, sockfd4 ;
 struct sockaddr_in servaddr;
 size_t max = 200;
 int svar=0, ver_num=0;
+
+int server_upflag;
+int version_obtainedflag;
+
+struct timeval tv;
 
 struct valid_file{
 char fl[100];
@@ -42,6 +47,15 @@ int version;
 
 struct fileversions fv[1000], fv_ptr;
 struct valid_file vf[1000];
+
+struct srvr_contains{
+
+int available_versions;
+
+};
+
+struct srvr_contains v_number;
+
 
 void store_version(char *str)
 {
@@ -79,6 +93,7 @@ void extract_ports(char *buff1, int i)
 
 }
 
+                       /***********************************      PUT routine        ***********************************/
 
 void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int suffix1, char *buf2, int suffix2, char *Username, char *Password, char *req_type, char *sub_f)
 {
@@ -107,7 +122,7 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
 
         if(strncmp(rec_buff, "ACK",3) == 0)
         {
-                /***********************      SEND  buf1       **********************/                
+                                /******    SEND  buf1     *******/                
         
                 send(socketfd, buf1, len1, 0);
 
@@ -120,7 +135,7 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
                 {
                         bzero(rec_buff, sizeof(rec_buff));
                       
-                /***********************      SEND  buf2       **********************/   
+                                /******      SEND  buf2       *****/   
 
                         send(socketfd, buf2, len2, 0);
                         rec = recv(socketfd, rec_buff, 90, 0);
@@ -136,137 +151,201 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
 
 }
 
+
+                        /******************************      LIST routine     *********************************/
+
 void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Username, char *Password, int server_no)
 {
 
+
+                        tv.tv_sec = 0;
+                        tv.tv_usec = 800000;
+
+                        setsockopt(socketfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
                         sprintf(send_buff, "%s %s %s %s %d", req_type, sub_folder, Username, Password, server_no);
                         send(socketfd, send_buff, strlen(send_buff), 0 );
                         
                         bzero(rec_buff1, sizeof(rec_buff1));
                         int rec = recv(socketfd, rec_buff1, 90, 0);
                         
+                        if((rec < 0) || rec == 0)
+                        {
+                                if(errno == EWOULDBLOCK)
+                                {
+                                        printf(" Socket %d timed out\n", server_no);
+                                        perror("Socket Timeout");
+                                        
+                       
+                                } else printf(" Socket %d down\n", server_no);
+                        }
                         
 
                        
-                        if(strncmp(rec_buff1, "ACK", 3) == 0)
+                        else
                         {
-                                sprintf(send_buff, "Send directory contents COUNT");
-                                send(socketfd, send_buff, strlen(send_buff), 0 );
 
-                                if(server_no == 1)
+                                server_upflag++;
+                                if(strncmp(rec_buff1, "ACK", 3) == 0)
                                 {
-                                        int rec = recv(socketfd, DFS1_count, 90, 0);
-                                        printf("\n\n Directory contents count under DFS %d 's subfolder :\n ", server_no);
-                                        printf("Count received : %d\n",DFS1_count[0]);
+                                        sprintf(send_buff, "Send directory contents COUNT");
+                                        send(socketfd, send_buff, strlen(send_buff), 0 );
 
-                                        sprintf(send_buff, "Now Send the contents");
-                                        send(socketfd, send_buff, strlen(send_buff),0);
-                                
-                                        for(int h=0; h<DFS1_count[0]; h++)
+                                        if(server_no == 1)
                                         {
-                                                bzero(rec_buff1, sizeof(rec_buff1));
-                                                int rec = recv(socketfd, rec_buff1, 90, 0);
-                                                
-                                                if(h>1)
+                                                int rec = recv(socketfd, DFS1_count, 90, 0);
+                                                printf("\n\n Directory contents count under DFS %d 's subfolder :\n ", server_no);
+                                                printf("Count received : %d\n",DFS1_count[0]);
+
+                                                sprintf(send_buff, "Now Send the contents");
+                                                send(socketfd, send_buff, strlen(send_buff),0);
+                                
+                                                for(int h=0; h<DFS1_count[0]; h++)
                                                 {
-                                                        *(DFS1_list + h) = rec_buff1;                                                
-                                                        //printf("%s\n", DFS1_list[h] );
-                                                        store_version(*(DFS1_list + h));
-                                                }                                                
-                                                send(socketfd, "ACK", 3,0);
+                                                        bzero(rec_buff1, sizeof(rec_buff1));
+                                                        int rec = recv(socketfd, rec_buff1, 90, 0);
+                                                
+                                                        if(h>1)
+                                                        {
+                                                                *(DFS1_list + h) = rec_buff1;                                                
+                                                                //printf("%s\n", DFS1_list[h] );
+                                                                store_version(*(DFS1_list + h));
+                                                        }                                                
+                                                        send(socketfd, "ACK", 3,0);
                                                
-                                        }
-
-                                        
-
-
-
-
-                                }
-
-                                else if(server_no == 2)
-                                {
-                                        int rec = recv(socketfd, DFS2_count, 90, 0);
-                                        printf("\n\n Directory contents count under DFS %d 's subfolder :\n ", server_no);
-                                        printf("Count received : %d\n",DFS2_count[0]);
-
-
-                                        sprintf(send_buff, "Now Send the contents");
-                                        send(socketfd, send_buff, strlen(send_buff),0);
-
-                                        for(int h=0; h<DFS2_count[0]; h++)
-                                        {
-                                                bzero(rec_buff1, sizeof(rec_buff1));
-                                                int rec = recv(socketfd, rec_buff1, 90, 0);
-                                                
-                                                if(h>1)
-                                                {  
-                                                        *(DFS2_list + h) = rec_buff1;                                              
-                                                        //printf("%s\n", DFS2_list[h] );
-                                                        store_version(*(DFS2_list + h));
                                                 }
-                                                send(socketfd, "ACK", 3,0); 
+
                                         }
-                                }
 
-                                else if(server_no == 3)
-                                {
-                                        int rec = recv(socketfd, DFS3_count, 90, 0);
-                                        printf("\n\n Directory contents count under DFS %d 's subfolder :\n ", server_no);
-                                       printf("Count received : %d\n",DFS3_count[0]);
-
-                                        sprintf(send_buff, "Now Send the contents");
-                                        send(socketfd, send_buff, strlen(send_buff),0);
-
-                                        for(int h=0; h<DFS3_count[0]; h++)
+                                        else if(server_no == 2)
                                         {
-                                                bzero(rec_buff1, sizeof(rec_buff1));
-                                                int rec = recv(socketfd, rec_buff1, 90, 0);
-                                                
-                                                if(h>1)
+                                                int rec = recv(socketfd, DFS2_count, 90, 0);
+                                                printf("\n\n Directory contents count under DFS %d 's subfolder :\n ", server_no);
+                                                printf("Count received : %d\n",DFS2_count[0]);
+
+
+                                                sprintf(send_buff, "Now Send the contents");
+                                                send(socketfd, send_buff, strlen(send_buff),0);
+
+                                                for(int h=0; h<DFS2_count[0]; h++)
                                                 {
-                                                        *(DFS3_list + h) = rec_buff1;
-                                                        //printf("%s\n", DFS3_list[h] );
-                                                        store_version(*(DFS3_list + h));
+                                                        bzero(rec_buff1, sizeof(rec_buff1));
+                                                        int rec = recv(socketfd, rec_buff1, 90, 0);
+                                                
+                                                        if(h>1)
+                                                        {  
+                                                                *(DFS2_list + h) = rec_buff1;                                              
+                                                                //printf("%s\n", DFS2_list[h] );
+                                                                store_version(*(DFS2_list + h));
+                                                        }
+                                                        send(socketfd, "ACK", 3,0); 
                                                 }
-                                                send(socketfd, "ACK", 3,0);
                                         }
-                                }
 
-                                else if(server_no == 4)
-                                {
-                                        int rec = recv(socketfd, DFS4_count, 90, 0);
-                                        printf("\n\n Directory contents count under DFS %d 's subfolder :\n ", server_no);
-                                        printf("Count received : %d\n",DFS4_count[0]);
-
-                                        sprintf(send_buff, "Now Send the contents");
-                                        send(socketfd, send_buff, strlen(send_buff),0);
-
-                                        for(int h=0; h<DFS4_count[0]; h++)
+                                        else if(server_no == 3)
                                         {
-                                                bzero(rec_buff1, sizeof(rec_buff1));
-                                                int rec = recv(socketfd, rec_buff1, 90, 0);
+                                                int rec = recv(socketfd, DFS3_count, 90, 0);
+                                                printf("\n\n Directory contents count under DFS %d 's subfolder :\n ", server_no);
+                                                printf("Count received : %d\n",DFS3_count[0]);
+
+                                                sprintf(send_buff, "Now Send the contents");
+                                                send(socketfd, send_buff, strlen(send_buff),0);
+
+                                                for(int h=0; h<DFS3_count[0]; h++)
+                                                {
+                                                        bzero(rec_buff1, sizeof(rec_buff1));
+                                                        int rec = recv(socketfd, rec_buff1, 90, 0);
+                                                
+                                                        if(h>1)
+                                                        {
+                                                                *(DFS3_list + h) = rec_buff1;
+                                                                //printf("%s\n", DFS3_list[h] );
+                                                                store_version(*(DFS3_list + h));
+                                                        }
+                                                        send(socketfd, "ACK", 3,0);
+                                                }
+                                        }
+
+                                        else if(server_no == 4)
+                                        {
+                                                int rec = recv(socketfd, DFS4_count, 90, 0);
+                                                printf("\n\n Directory contents count under DFS %d 's subfolder :\n ", server_no);
+                                                printf("Count received : %d\n",DFS4_count[0]);
+
+                                                sprintf(send_buff, "Now Send the contents");
+                                                send(socketfd, send_buff, strlen(send_buff),0);
+
+                                                for(int h=0; h<DFS4_count[0]; h++)
+                                                {
+                                                        bzero(rec_buff1, sizeof(rec_buff1));
+                                                        int rec = recv(socketfd, rec_buff1, 90, 0);
                                                
-                                                if(h>1)
-                                                {
-                                                        *(DFS4_list + h) = rec_buff1;
-                                                        //printf("%s\n", DFS4_list[h] );
-                                                        store_version(*(DFS4_list + h));
+                                                        if(h>1)
+                                                        {
+                                                                *(DFS4_list + h) = rec_buff1;
+                                                                //printf("%s\n", DFS4_list[h] );
+                                                                store_version(*(DFS4_list + h));
+                                                        }
+                                                        send(socketfd, "ACK", 3,0); 
                                                 }
-                                                send(socketfd, "ACK", 3,0); 
-                                        }
-                                } // server_no = 4
-                        
+                                        } // server_no = 4
+
+                                }
+                                else    // if incorrect username/password received
+                                {
+
+                                        printf("Invalid Username/Password. Try Again\n\n");
+                                }
                                 
                                 
 
-                        } // if ACK is received on sending main command
-
-                        
-
+                        } // if socket did not timeout
 
 
 }
+
+                        /******************************      GET routine     *********************************/
+
+void get_version(int socketfd, char *file_name1, char *sub_folder, char *Username, char *Password, int version_no, int server_no)
+{
+
+        tv.tv_sec = 0;
+        tv.tv_usec = 800000;
+
+        setsockopt(sockfd1, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        memset(send_buff, 0, sizeof(send_buff));
+        int req_version = 1;
+        sprintf(send_buff, "%s %s %s %s %s %d" , req_method, filename, subfolder, username, password, req_version);
+        send(socketfd, send_buff, strlen(send_buff), 0);
+
+        bzero(rec_buff1, sizeof(rec_buff1));
+        int rec = recv(socketfd, rec_buff1, 90, 0);
+                        
+        if((rec < 0) || rec == 0)
+        {
+                if(errno == EWOULDBLOCK)
+                {
+                        printf(" Socket %d timed out\n", server_no);
+                        perror("Socket Timeout");
+                                        
+                       
+                } else printf(" Socket %d down\n", server_no);
+        }
+
+        else
+        {
+                if(strncmp(rec_buff1,"Available",9))  
+                {
+                        sprintf(send_buff, "Send file part");
+                        send(socketfd, send_buff, strlen(send_buff), 0);
+                }
+
+
+
+
+        }
+
+}
+
 
 int main(int argc, char **argv)
 {
@@ -332,7 +411,7 @@ int main(int argc, char **argv)
  
         }
 
-
+        server_upflag=0;
 
         
         //Creation of the socket
@@ -508,9 +587,14 @@ int main(int argc, char **argv)
                         tok2 = strtok(cmd, " ");
                         strncpy(req_method, tok2, strlen(tok2));
                         puts(req_method);
-                        tok2 = strtok(NULL, " \t\n");
+                        tok2 = strtok(NULL, " ");
                         strncpy(filename, tok2, strlen(tok2));
                         puts(filename);
+                        tok2 = strtok(NULL, " \t\n");
+                        strncpy(subfolder, tok2, strlen(tok2));
+                        puts(subfolder);
+                        
+                        
 
                         
 
@@ -526,6 +610,8 @@ int main(int argc, char **argv)
                         strncpy(subfolder, tok, strlen(tok));
                         puts(subfolder);
 
+                        
+
                         bzero(DFS1_count, sizeof(DFS1_count));
                         bzero(DFS2_count, sizeof(DFS2_count));
                         bzero(DFS3_count, sizeof(DFS3_count));
@@ -534,6 +620,7 @@ int main(int argc, char **argv)
                         memset(vf, 0, 100*sizeof(struct fileversions));
 
                         svar = 0;
+                       
                         get_dircontents(sockfd1, req_method, subfolder, username, password, 1);
                         get_dircontents(sockfd2, req_method, subfolder, username, password, 2);
                         get_dircontents(sockfd3, req_method, subfolder, username, password, 3);
@@ -541,12 +628,12 @@ int main(int argc, char **argv)
 
 
                         int yu = DFS1_count[0] +  DFS2_count[0] +  DFS3_count[0] +  DFS4_count[0];
-                            yu = yu - 8;      
-                                /*for(int m=0; m<yu; m++)             // 2 dirs escaped in each DFS : . & ..
+                            yu = yu - (2*server_upflag);      
+                                for(int m=0; m<yu; m++)             // 2 dirs escaped in each DFS : . & ..
                                 {
                                         printf(" Structur %d has file %s and version %d\n", m, fv[m].file_name, fv[m].version);
 
-                                }*/ 
+                                } 
                                 int m,a;
                 
                         /****  From the array of structures, each struct where all filenames received from DFSs are save, 
@@ -575,10 +662,16 @@ int main(int argc, char **argv)
                                 }
                                 
                                 printf("\n\n **************************  LIST RESULTS  ***************************\n\n");
+
+                                for(int l=0; l<3; l++)
+                                {
+                                        printf(" %d. %s %d\n", l, vf[l].fl, vf[l].vr);
+                                }        
+                
                                 for(int d=0; d<100; d++)
                                 {
                                         if(vf[d].vr == 30) printf(" %d. %s Full File\n", d+1, vf[d].fl);
-                                        else if( (vf[d].vr > 0) &&(vf[d].vr < 30)) printf(" %d. %s Full File\n", d+1, vf[d].fl);
+                                        else if( (vf[d].vr > 0) &&(vf[d].vr < 30)) printf(" %d. %s Incomplete File\n", d+1, vf[d].fl);
                                         else if( vf[0].fl[0] == 0)
                                         {
                                                  printf("\n THE DFS SERVERS DONT HAVE ANY FILES :( \n");
@@ -591,6 +684,7 @@ int main(int argc, char **argv)
 
 
                         svar=0;
+                        server_upflag=0;
 
                 }
 

@@ -22,7 +22,7 @@ socklen_t clilen;
 char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
 char recv_buff[buff_max_size], username[30], username_rec[30], password[30], password_rec[30], *conf_buffer, req_method[30];
 char fname1[30], fname2[30], root_dir[200], subfolder[60];
-int f1_size, f2_size, server_no;
+int f1_size, f2_size, server_no, req_version;
 struct sockaddr_in cliaddr, servaddr;
 size_t max = 200;
 
@@ -44,6 +44,12 @@ void handle_request(int socketfd)
                         strncpy(fbuff1, recv_buff, strlen(recv_buff));
                         bzero(recv_buff, sizeof(recv_buff));
                         bzero(root_dir, sizeof(root_dir));
+                        bzero(fbuff2, sizeof(fbuff2));
+                        bzero(fname1, sizeof(fname1));
+                        bzero(fname2, sizeof(fname2));
+                        bzero(req_method, sizeof(req_method));
+                        bzero(username_rec, sizeof(username_rec));
+                        bzero(password_rec, sizeof(password_rec));
                         char key[30];
 
                         if( strncmp(fbuff1,"PUT",3) ==0 )
@@ -316,10 +322,30 @@ void handle_request(int socketfd)
                                 
                                 }
                 
-                       }
-
+                        }
 
                         
+                        else if( strncmp(fbuff1,"GET",3) ==0 )
+                        {
+
+                                sscanf(fbuff1, "%s %s %s %s %s %d", req_method, fname1, subfolder, username_rec, password_rec, &req_version);
+                                printf("Request : %s %s %s %s %s %d\n", req_method, fname1, subfolder, username_rec, password_rec, req_version);
+
+                                if( (strcmp(username, username_rec) == 0) && (strcmp(password, password_rec) == 0))
+                                {
+
+                                }
+
+                                else
+                                {
+                                        
+                                        printf("Invalid Username/Password received ! \n");
+                                        send(socketfd, "Invalid Username/Password", 25, 0);
+                                
+                                }
+
+
+                        }                        
                         
                         else            //if req_method is not put/get/list
                         {
