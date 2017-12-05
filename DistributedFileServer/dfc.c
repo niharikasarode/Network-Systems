@@ -15,8 +15,8 @@
 #define buff_max_size 99999
 
 FILE *conf;
-char dfc_conf[30], *conf_buffer, username[20], password[20], cmd[60];
-char filename[30], *fbuff1_ptr, *fbuff2_ptr, *fbuff3_ptr, *fbuff4_ptr;
+char dfc_conf[30], *conf_buffer, username[20], password[20], cmd[60], req_method[30];
+char filename[30], send_buff[buff_max_size];
 char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
 int port[4];
 int sockfd1, sockfd2, sockfd3, sockfd4 ;
@@ -36,8 +36,27 @@ void extract_ports(char *buff1, int i)
 }
 
 
+void sendto_server(int socketfd, char *filename, char *buf1, int suffix1, char *buf2, int suffix2, char *Username, char *Password, char *req_type)
+{
+        int rec, len1 = strlen(buf1);
+        int len2 = strlen(buf2);
+        char fname1[30], fname2[30], rec_buff[90];
+        sprintf(fname1, ".%s.%d", filename, suffix1);
+        sprintf(fname2, ".%s.%d", filename, suffix2);
+        sprintf(send_buff,"%s %s %d %s %d %s %s ", req_type, fname1, len1, fname2, len2, Username, Password);
+        puts(send_buff);
+        send(socketfd, send_buff, strlen(send_buff), 0);
+        
 
 
+        rec = recv(socketfd, rec_buff, 90, 0);
+        printf("Server says : ");
+        puts(rec_buff);
+        //write(socketfd, buf1, strlen(buf1));
+        //send(socketfd, buf2, sizeof(buf2), 0);
+
+
+}
 
 
 int main(int argc, char **argv)
@@ -45,10 +64,7 @@ int main(int argc, char **argv)
        
         char sendline[MAXLINE], recvline[MAXLINE];
         strncpy(sendline, "Send this please work", 21);
-        fbuff1_ptr = (char *)malloc(buff_max_size*sizeof(char));
-        fbuff2_ptr = (char *)malloc(buff_max_size*sizeof(char));
-        fbuff3_ptr = (char *)malloc(buff_max_size*sizeof(char));
-        fbuff4_ptr = (char *)malloc(buff_max_size*sizeof(char));
+
 
         //basic check of the arguments
         //additional checks can be inserted
@@ -127,7 +143,7 @@ int main(int argc, char **argv)
         perror("Problem in connecting to the server");
         exit(3);
         }
-
+        else printf("Connected to server \n\n" );
 
         servaddr.sin_port =  htons(port[1]); //convert to big-endian order
 
@@ -181,54 +197,90 @@ int main(int argc, char **argv)
        
 
 
-                send(sockfd1, sendline, strlen(sendline), 0);
+                /*send(sockfd1, sendline, strlen(sendline), 0);
                 send(sockfd2, sendline, strlen(sendline), 0);
                 send(sockfd3, sendline, strlen(sendline), 0);
-                send(sockfd4, sendline, strlen(sendline), 0);
-       
+                send(sockfd4, sendline, strlen(sendline), 0);*/
+       while(1)
+       {
+                printf("\n\n\n");
+                printf(" *-*-*-*-*-*-*-  The following commands are handled by the DFC :    *-*-*-*-*-*-*-\n");
+                printf("                1. LIST : lists files stored at the server ofr a given username \n ");
+                printf("               2. PUT filename: Sends a file to the distributed servers\n");
+                printf("                3. GET filename: Retrieves a file from the distributed servers\n\n\r ");
 
-        printf("\n The following commands are handled by the DFC : \n");
-        printf(" 1. LIST/list : lists files stored at the server ofr a given username\n ");
-        printf(" 2. PUT/put filename: Sends a file from the client system to the distributed servers\n");
-        printf(" 3. GET/get filename: Retrieves a file from the distributed servers\n ");
+                fgets(cmd, MAXLINE, stdin);
+                puts(cmd);
 
-        fgets(cmd, MAXLINE, stdin);
-        puts(cmd);
+                if( (strncmp(cmd, "PUT", 3) == 0) || (strncmp(cmd, "put", 3) == 0))
+                {
+                        char *tok2;
+                        tok2 = strtok(cmd, " ");
+                        strncpy(req_method, tok2, strlen(tok2));
+                        puts(req_method);
+                        tok2 = strtok(NULL, " \t\n");
+                        strncpy(filename, tok2, strlen(tok2));
+                        puts(filename);
 
-        if( (strncmp(cmd, "PUT", 3) == 0) || (strncmp(cmd, "put", 3) == 0))
-        {
-                char *tok2;
-                tok2 = strtok(cmd, " ");
-                puts(tok2);
-                tok2 = strtok(NULL, " \t\n");
-                puts(tok2);
-                strncpy(filename, tok2, strlen(tok2));
-                puts(filename);
+                        int mod = mod_from_md5(filename);
+                        printf("mod : %d\n", mod);
 
-                int mod = mod_from_md5(filename);
-                printf("mod : %d\n", mod);
+                        file_divide(filename, fbuff1, fbuff2, fbuff3, fbuff4);
 
-                file_divide(filename, fbuff1, fbuff2, fbuff3, fbuff4);
+                        /*printf(" ********************************** Part 1 ************************************** \n");
+                        puts(fbuff1);
+                        printf(" ********************************** Part 2 ************************************** \n");
+                        puts(fbuff2);
+                        printf(" ********************************** Part 3 ************************************** \n");
+                        puts(fbuff3);
+                        printf(" ********************************** Part 4 ************************************** \n");
+                        puts(fbuff4);*/               
 
-                printf(" ********************************** Part 1 ************************************** \n");
-                puts(fbuff1);
-                printf(" ********************************** Part 2 ************************************** \n");
-                puts(fbuff2);
-                printf(" ********************************** Part 3 ************************************** \n");
-                puts(fbuff3);
-                printf(" ********************************** Part 4 ************************************** \n");
-                puts(fbuff4);               
-
-                /*switch(mod):
-
-                        case 0: 
-
-                        case 1:
-
-                        case 2:
-
-                        case 3:*/
+                        switch(mod)
+                        {
+                                case 0:
                 
+                                        sendto_server(sockfd1, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
+                                        sendto_server(sockfd2, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
+                                        sendto_server(sockfd3, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
+                                        sendto_server(sockfd4, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
+                                        break; 
+
+                                case 1:
+
+                                        sendto_server(sockfd1, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
+                                        sendto_server(sockfd2, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
+                                        sendto_server(sockfd3, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
+                                        sendto_server(sockfd4, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
+ 
+
+                                        break; 
+
+
+                                case 2:
+
+                                        sendto_server(sockfd1, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
+                                        sendto_server(sockfd2, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
+                                        sendto_server(sockfd3, filename, fbuff1, 1, fbuff2, 2, username, password, req_method);
+                                        sendto_server(sockfd4, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
+ 
+                                        break; 
+
+
+                                case 3:
+
+                                        sendto_server(sockfd1, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
+                                        sendto_server(sockfd2, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
+                                        sendto_server(sockfd3, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
+                                        sendto_server(sockfd4, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
+
+                                        break; 
+
+                        }
+                
+                }
+
+
         }
 
 
@@ -236,5 +288,5 @@ int main(int argc, char **argv)
 
          
         
- exit(0);
+ //exit(0);
 }
