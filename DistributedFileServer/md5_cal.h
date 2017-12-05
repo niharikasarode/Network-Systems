@@ -48,11 +48,11 @@ int mod_from_md5(char *filename)
 }
 
 
-void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_prt3, char *file_prt4 )
+void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_prt3, char *file_prt4, int *arr )
 {
 
         FILE *fp;
-        int len, chunk_size, rem_size;
+        int len, chunk =0, rem = 0;
         char cmd[60];
 
         fp = fopen(filename, "rb");
@@ -67,13 +67,17 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
 
                 if((len % 4) != 0)
                 {
-                        chunk_size =( len/4 ) + 1;
-                        rem_size = (len - (3*chunk_size));
+                        chunk =( len/4 ) + 1;
+                        rem = (len - (3*chunk));
 
-                        printf("chunk size : %d and rem size : %d\n", chunk_size, rem_size);
+                        printf("chunk size : %d and rem size : %d\n", chunk, rem);
                 }
 
-                else chunk_size = len/4;
+                else
+                {
+                        chunk = len/4;
+                        rem = 0;
+                }
         }
 
         else
@@ -100,66 +104,69 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
                 bzero(file_prt3, sizeof(file_prt3));
                 bzero(file_prt4, sizeof(file_prt4));
 
-                int j = fread(file_prt1, chunk_size, 1, fp);
-                if(j < 0)
+                arr[0] = fread(file_prt1, sizeof(char), chunk, fp);
+                if(arr[0] < 0)
                 {
                         printf("File not read");
                         exit(1);
                 }
-                
+
 
                 /***** 2 ****/
 
                 fseek(fp, 0, SEEK_SET);
-                fseek(fp, chunk_size, SEEK_SET);
+                fseek(fp, chunk, SEEK_SET);
 
-                j = fread(file_prt2, chunk_size, 1, fp);
-                if(j < 0)
+                arr[1] = fread(file_prt2, sizeof(char), chunk, fp);
+                if(arr[1] < 0)
                 {
                         printf("File not read");
                         exit(1);
                 }
+
                 
 
                 /**** 3 *****/
 
                 fseek(fp, 0, SEEK_SET);
-                fseek(fp, (2*chunk_size), SEEK_SET);
+                fseek(fp, (2*chunk), SEEK_SET);
 
-                j = fread(file_prt3, chunk_size, 1, fp);
-                if(j < 0)
+                arr[2] = fread(file_prt3, sizeof(char), chunk, fp);
+                if(arr[2] < 0)
                 {
                         printf("File not read");
                         exit(1);
                 }
+
                
 
                 /***** 4 ****/
 
                 fseek(fp, 0, SEEK_SET);
-                fseek(fp, 3*chunk_size, SEEK_SET);
-
-                if(rem_size == 0)
+                fseek(fp, 3*chunk, SEEK_SET);
+                int b;
+                if(rem == 0)
                 {
-                        j = fread(file_prt4, chunk_size, 1, fp);
+                        arr[3] = fread(file_prt4, sizeof(char), chunk, fp);
                 }                
                 else
                 {
-                        j = fread(file_prt4, rem_size, 1, fp);
+                        arr[3] = fread(file_prt4, sizeof(char), rem, fp);
                 }
 
-                if(j < 0)
+                if(arr[3] < 0)
                 {
                         printf("File not read");
                         exit(1);
                 }
-                
+
 
                  fclose(fp);
 
-
-
-
+                for(int p = 0; p<4; p++)
+                {
+                        printf("%d\n", arr[p]);
+                }
 
 
 
