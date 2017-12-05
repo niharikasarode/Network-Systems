@@ -201,6 +201,8 @@ int main(int argc, char **argv)
 
                 int mod = mod_from_md5(filename);
                 printf("mod : %d\n", mod);
+
+                file_divide(filename);
                 
         }
 
