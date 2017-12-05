@@ -20,7 +20,7 @@ FILE *conf;
 char dfc_conf[30], *conf_buffer, username[20], password[20], cmd[60], req_method[30];
 char filename[30], send_buff[buff_max_size];
 char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
-int port[4];
+int port[4], b_size[4], chunk_size,rem_size;
 int sockfd1, sockfd2, sockfd3, sockfd4 ;
 struct sockaddr_in servaddr;
 size_t max = 200;
@@ -40,13 +40,18 @@ void extract_ports(char *buff1, int i)
 
 void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int suffix1, char *buf2, int suffix2, char *Username, char *Password, char *req_type)
 {
-        int rec, len1 = strlen(buf1);
-        int len2 = strlen(buf2);
+        int rec, len1, len2;
         char fname1[30], fname2[30], rec_buff[90];
         bzero(rec_buff, sizeof(rec_buff));
 
         sprintf(fname1, ".%s.%d", filename, suffix1);
         sprintf(fname2, ".%s.%d", filename, suffix2);
+
+        len1 = b_size[suffix1 - 1];
+        len2 = b_size[suffix2 - 1];
+
+
+
         sprintf(send_buff,"%s %s %d %s %d %s %s %d ", req_type, fname1, len1, fname2, len2, Username, Password, server_no);
         //puts(send_buff);
         send(socketfd, send_buff, strlen(send_buff), 0);
@@ -60,7 +65,9 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
 
         if(strncmp(rec_buff, "ACK",3) == 0)
         {
-                send(socketfd, buf1, strlen(buf1), 0);
+                /***********************      SEND  buf1       **********************/                
+        
+                send(socketfd, buf1, len1, 0);
 
                 bzero(rec_buff, sizeof(rec_buff));
                 rec = recv(socketfd, rec_buff, 90, 0);
@@ -70,8 +77,10 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
                 if(strncmp(rec_buff, "ACK",3) == 0)
                 {
                         bzero(rec_buff, sizeof(rec_buff));
-                        
-                        send(socketfd, buf2, strlen(buf2), 0);
+                      
+                /***********************      SEND  buf2       **********************/   
+
+                        send(socketfd, buf2, len2, 0);
                         rec = recv(socketfd, rec_buff, 90, 0);
                         printf("\n\n After sending 2nd PART Server says : ");
                         puts(rec_buff);
@@ -235,7 +244,8 @@ int main(int argc, char **argv)
                 printf("                1. LIST : lists files stored at the server ofr a given username \n ");
                 printf("               2. PUT filename: Sends a file to the distributed servers\n");
                 printf("                3. GET filename: Retrieves a file from the distributed servers\n\n\r ");
-
+                bzero(cmd, sizeof(cmd));
+                bzero(filename, sizeof(filename));
                 fgets(cmd, MAXLINE, stdin);
                 puts(cmd);
 
@@ -251,8 +261,9 @@ int main(int argc, char **argv)
 
                         int mod = mod_from_md5(filename);
                         printf("mod : %d\n", mod);
-
-                        file_divide(filename, fbuff1, fbuff2, fbuff3, fbuff4);
+                        chunk_size = 0;
+                        rem_size =0;
+                        file_divide(filename, fbuff1, fbuff2, fbuff3, fbuff4, b_size);
 
                         /*printf(" ********************************** Part 1 ************************************** \n");
                         puts(fbuff1);

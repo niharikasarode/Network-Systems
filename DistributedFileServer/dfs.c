@@ -30,7 +30,9 @@ size_t max = 200;
 
 void handle_request(int socketfd)
 {
-
+                
+        while(1)
+        {
                 n = recv(socketfd, recv_buff, MAXLINE,0);  
                 if(n > 0)
                 {
@@ -159,13 +161,7 @@ void handle_request(int socketfd)
                 }
 
 
-
-
-
-
-
-
-
+        }
 
 
 }
