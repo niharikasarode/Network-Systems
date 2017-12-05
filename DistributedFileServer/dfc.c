@@ -14,12 +14,12 @@
 
 #define MAXLINE 400 /*max text line length*/
 #define SERV_PORT 3000
-#define buff_max_size 99999
+#define buff_max_size 90000
 
-FILE *conf, *fi;
-char dfc_conf[30], *conf_buffer, username[20], password[20], cmd[60], req_method[30];
-char filename[30], send_buff[buff_max_size], subfolder[60], rec_buff1[buff_max_size];
-char *fbuff1, *fbuff2, *fbuff3, *fbuff4;
+FILE *conf, *fi, *fop, *fop1;
+char dfc_conf[30], *conf_buffer, username[20], password[20], cmd[60], req_method[30], cmd1[60];
+char filename[30], send_buff[buff_max_size], subfolder[60], rec_buff1[buff_max_size], des[buff_max_size];
+char *fbuff1, *fbuff2, *fbuff3, *fbuff4, *f1, *f2, *f3, *f4;
 char *f_ver1, *f_ver2, *f_ver3, *f_ver4;
 char *DFS1_list[99],*DFS2_list[99], *DFS3_list[99], *DFS4_list[99];
 int DFS1_count[10], DFS2_count[10], DFS3_count[10], DFS4_count[10];
@@ -28,7 +28,7 @@ int fsize_1, fsize_2, fsize_3, fsize_4;
 int sockfd1, sockfd2, sockfd3, sockfd4 ;
 struct sockaddr_in servaddr;
 size_t max = 200;
-int svar=0, ver_num=0, sumofvers=0;
+int svar=0, var=0, ver_num=0, sumofvers=0;
 char usr_dir[80];
 
 
@@ -295,7 +295,7 @@ void extract_ports(char *buff1, int i)
 
 void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int suffix1, char *buf2, int suffix2, char *Username, char *Password, char *req_type, char *sub_f)
 {
-        int rec, len1, len2;
+        int rec, len1, len2, n, n2;
         char fname1[30], fname2[30], rec_buff[90];
         bzero(rec_buff, sizeof(rec_buff));
 
@@ -309,8 +309,9 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
 
         sprintf(send_buff,"%s %s %s %d %s %d %s %s %d ", req_type, sub_f, fname1, len1, fname2, len2, Username, Password, server_no);
         //puts(send_buff);
+                printf("Coming here 0\n\n");
         send(socketfd, send_buff, strlen(send_buff), 0);
-        
+
 
 
         rec = recv(socketfd, rec_buff, 90, 0);
@@ -322,8 +323,54 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
         {
                                 /******    SEND  buf1     *******/                
         
-                send(socketfd, buf1, len1, 0);
+                if (len1 > buff_max_size)
+                {
+                        fop = fopen(buf1, "rb");
+                        if(fop != NULL)
+                        {
+                                printf("Coming here 1\n\n");
+                                int an =1,div = len1/buff_max_size;
+                                int per = len1%buff_max_size;
+                                n=0,n2=0;
+                                while(n2<len1)
+                                {
+                                         printf("Coming here 2\n\n");
+                                        if(an <= div)
+                                        {
+                                                int jk = fread(des, sizeof(char), buff_max_size, fop);
+                                                n = send(socketfd, des, buff_max_size, 0);
+                                                memset(des, 0, sizeof(des));
+                                                n2 = n2 +n;
+                                                an++;
+                                        }
+                                        else
+                                        {
+                                                 int jk = fread(des, sizeof(char), per, fop);
+                                                n = send(socketfd, des, per, 0);
+                                                memset(des, 0, sizeof(des));
+                                                n2 = n2 +n;
+                                                an++;
+                                        }
+                                } 
 
+                        }      
+                        printf(" ******** buf1 > 90000, total sent, n2 : %d\n\n", n2);
+                }
+                else
+                {
+                        fop = fopen(buf1, "rb");
+                        if(fop != NULL)
+                        {
+                                n=0,n2=0;
+                                
+                                int jk = fread(des, sizeof(char), len1, fop);
+                                n = send(socketfd, des, len1, 0);
+                                memset(des, 0, sizeof(des));
+                                
+
+                        }
+
+                }
                 bzero(rec_buff, sizeof(rec_buff));
                 rec = recv(socketfd, rec_buff, 90, 0);
                 printf("\n\n After sending 1st PART Server says : ");
@@ -335,7 +382,50 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
                       
                                 /******      SEND  buf2       *****/   
 
-                        send(socketfd, buf2, len2, 0);
+                        if (len2 > buff_max_size)
+                        {
+                                fop1 = fopen(buf2, "rb");
+                                if(fop1 != NULL)
+                                {
+                                        int an =1,div = len2/buff_max_size;
+                                        int per = len2%buff_max_size;
+                                        n=0,n2=0;
+                                        while(n2<len2)
+                                        {
+                                                if(an <= div)                                                
+                                                {
+                                                int jk = fread(des, sizeof(char), buff_max_size, fop1);
+                                                n = send(socketfd, des, buff_max_size, 0);
+                                                memset(des, 0, sizeof(des));
+                                                n2 = n2 +n;
+                                                an++;
+                                                }
+                                                else
+                                                {
+                                                        int jk = fread(des, sizeof(char), per, fop1);
+                                                n = send(socketfd, des, per, 0);
+                                                memset(des, 0, sizeof(des));
+                                                n2 = n2 +n;
+                                                }
+                                        } 
+
+                                }      
+                                printf(" ******** buf1 > 90000, total sent, n2 : %d\n\n", n2);
+                        }
+                        else
+                        {
+                                fop1 = fopen(buf2, "rb");
+                                if(fop1 != NULL)
+                                {
+                                n=0,n2=0;
+                                       
+                                        int jk = fread(des, sizeof(char), len2, fop1);
+                                        n = send(socketfd, des, len2, 0);
+                                        memset(des, 0, sizeof(des));
+                                        
+                                }
+
+                        }
                         bzero(rec_buff, sizeof(rec_buff));
                         rec = recv(socketfd, rec_buff, 90, 0);
                         printf("\n\n After sending 2nd PART Server says : ");
@@ -346,8 +436,7 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
         }
 
         else printf("Invalid Username/Password. Could not proceed");
-
-
+        
 }
 
 
@@ -768,35 +857,29 @@ int main(int argc, char **argv)
                                                 fbuff2 = (char*) calloc(buff_max_size, sizeof(char));
                                                 if(fbuff2 == NULL) printf("No memory alloc 2\n");
                                                 else printf("Mem alloc 2\n");
-                                                
-                                                fbuff3 = (char*) calloc(buff_max_size, sizeof(char));
-                                                if(fbuff3 == NULL) printf("No memory alloc 3\n");
-                                                else printf("Mem alloc 3\n");
- 
-                                                fbuff4 = (char*) calloc(buff_max_size, sizeof(char));
-                                                if(fbuff4 == NULL) printf("No memory alloc 4\n");
-                                                else printf("Mem alloc 4\n");
-
-
-
-                                                file_divide(filename, fbuff1, fbuff2, fbuff3, fbuff4, b_size, password);
+                                                /*strncpy(f1,"f1", 2);
+                                                strncpy(f2,"f2", 2);
+                                                strncpy(f3,"f3", 2);
+                                                strncpy(f4,"f4", 2);*/
+                                                //divides a file into 4 files
+                                                file_divide(filename, fbuff1, fbuff2, b_size);
 
                                                 switch(mod)
                                                 {
                                                         case 0:
                 
-                                                        sendto_server(sockfd1, 1, filename, fbuff1, 1, fbuff2, 2, username, password, req_method, subfolder); 
-                                                        sendto_server(sockfd2, 2, filename, fbuff2, 2, fbuff3, 3, username, password, req_method, subfolder); 
-                                                        sendto_server(sockfd3, 3, filename, fbuff3, 3, fbuff4, 4, username, password, req_method, subfolder); 
-                                                        sendto_server(sockfd4, 4, filename, fbuff4, 4, fbuff1, 1, username, password, req_method, subfolder);
+                                                        sendto_server(sockfd1, 1, filename, "f1", 1, "f2", 2, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd2, 2, filename, "f2", 2, "f3", 3, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd3, 3, filename, "f3", 3, "f4", 4, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd4, 4, filename, "f4", 4, "f1", 1, username, password, req_method, subfolder);
                                                         break; 
 
                                                         case 1:
 
-                                                        sendto_server(sockfd1, 1, filename, fbuff4, 4, fbuff1, 1, username, password, req_method, subfolder);
-                                                        sendto_server(sockfd2, 2, filename, fbuff1, 1, fbuff2, 2, username, password, req_method, subfolder); 
-                                                        sendto_server(sockfd3, 3, filename, fbuff2, 2, fbuff3, 3, username, password, req_method, subfolder); 
-                                                        sendto_server(sockfd4, 4, filename, fbuff3, 3, fbuff4, 4, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd1, 1, filename, "f4", 4, "f1", 1, username, password, req_method, subfolder);
+                                                        sendto_server(sockfd2, 2, filename, "f1", 1, "f2", 2, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd3, 3, filename, "f2", 2, "f3", 3, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd4, 4, filename, "f3", 3, "f4", 4, username, password, req_method, subfolder); 
  
 
                                                         break; 
@@ -804,20 +887,20 @@ int main(int argc, char **argv)
 
                                                         case 2:
 
-                                                        sendto_server(sockfd1, 1, filename, fbuff3, 3, fbuff4, 4, username, password, req_method, subfolder); 
-                                                        sendto_server(sockfd2, 2, filename, fbuff4, 4, fbuff1, 1, username, password, req_method, subfolder);
-                                                        sendto_server(sockfd3, 3, filename, fbuff1, 1, fbuff2, 2, username, password, req_method, subfolder);
-                                                        sendto_server(sockfd4, 4, filename, fbuff2, 2, fbuff3, 3, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd1, 1, filename, "f3", 3, "f4", 4, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd2, 2, filename, "f4", 4, "f1", 1, username, password, req_method, subfolder);
+                                                        sendto_server(sockfd3, 3, filename, "f1", 1, "f2", 2, username, password, req_method, subfolder);
+                                                        sendto_server(sockfd4, 4, filename, "f2", 2, "f3", 3, username, password, req_method, subfolder); 
  
                                                         break; 
 
 
                                                         case 3:
 
-                                                        sendto_server(sockfd1, 1, filename, fbuff2, 2, fbuff3, 3, username, password, req_method, subfolder); 
-                                                        sendto_server(sockfd2, 2, filename, fbuff3, 3, fbuff4, 4, username, password, req_method, subfolder); 
-                                                        sendto_server(sockfd3, 3, filename, fbuff4, 4, fbuff1, 1, username, password, req_method, subfolder);
-                                                        sendto_server(sockfd4, 4, filename, fbuff1, 1, fbuff2, 2, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd1, 1, filename, "f2", 2, "f3", 3, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd2, 2, filename, "f3", 3, "f4", 4, username, password, req_method, subfolder); 
+                                                        sendto_server(sockfd3, 3, filename, "f4", 4, "f1", 1, username, password, req_method, subfolder);
+                                                        sendto_server(sockfd4, 4, filename, "f1", 1, "f2", 2, username, password, req_method, subfolder); 
 
                                                         break; 
 
@@ -825,8 +908,15 @@ int main(int argc, char **argv)
                                                 
                                                 free(fbuff1);
                                                 free(fbuff2);
-                                                free(fbuff3);
-                                                free(fbuff4);
+                                                var=1;        
+                                                while(var < 5)
+                                                {
+                                                        sprintf(cmd1 , "rm f%d", var);
+                                                        system(cmd1);
+                                                        var++;
+                                                }
+                                                var=1;
+
 
                                                 close_sockets();
                 

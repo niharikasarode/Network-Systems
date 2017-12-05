@@ -14,10 +14,10 @@
 #define MAXLINE 4096 /*max text line length*/
 //#define SERV_PORT 3000 /*port*/
 #define LISTENQ 8 /*maximum number of client connections */
-#define buff_max_size 99999
+#define buff_max_size 90000
 
 
-int SERV_PORT,listenfd, connfd, n;
+int SERV_PORT,listenfd, connfd, n, n2;
 socklen_t clilen;
 char fbuff1[buff_max_size], *fbuff2, fbuff3[buff_max_size], *fbuff4;
 char recv_buff[buff_max_size], username[30], username_rec[30], password[30], password_rec[30], *conf_buffer, req_method[30];
@@ -59,7 +59,7 @@ void handle_request(int socketfd)
                                 printf("\n\n");
                                 sscanf(fbuff1,"%s %s %s %d %s %d %s %s %d", req_method, subfolder, fname1, &f1_size, fname2, &f2_size, username_rec, password_rec, &server_no );
                                 printf("\n %s %s %s %d %s %d %s %s %d\n", req_method, subfolder, fname1, f1_size, fname2, f2_size, username_rec, password_rec, server_no );
-                               
+                                valid_user=0;
                                 for(int d=0; d<num_users; d++)
                                 {
                                         if( ((strcmp(Users[2*d], username_rec) == 0) && (strcmp(Users[2*d+1], password_rec) == 0)) ) valid_user=1;
@@ -78,7 +78,7 @@ void handle_request(int socketfd)
                                         strncpy(key, password, len2);
                                         fbuff2 = (char*)calloc(buff_max_size,sizeof(char));
                                         if(fbuff2 == NULL) printf("fbuff2 mem not allocated\n\n");
-                                        n = recv(socketfd, fbuff2, buff_max_size, 0);
+                                        //n = recv(socketfd, fbuff2, buff_max_size, 0);
                                         
                                         char usr_dir[40];
                                         sprintf(usr_dir, "./DFS%d/%s", server_no, username_rec);
@@ -122,7 +122,27 @@ void handle_request(int socketfd)
                                                 }
                                                 printf("******************************************\n");
                                                 puts(decrypt);*/
-                                                fwrite(fbuff2, f1_size, 1, fp1);
+                                                n =0, n2=0;
+                                                
+                                                if(f1_size > buff_max_size)                                        
+                                                {              
+                                                while(n2 < f1_size)
+                                                {
+                                                n = recv(socketfd, fbuff2, buff_max_size, 0);
+                                                fwrite(fbuff2, n, 1, fp1);
+                                                bzero(fbuff2, sizeof(fbuff2));
+                                                n2 = n2 + n;
+                                                }
+                                                printf("************ received 1st n2 : %d\n", n2);
+                                                n=0, n2=0; 
+                                                }
+
+                                                else
+                                                {
+                                                n = recv(socketfd, fbuff2, f1_size, 0);
+                                                fwrite(fbuff2, n, 1, fp1);
+                                                bzero(fbuff2, sizeof(fbuff2));
+                                                }
 
                                                 fclose(fp1);
                                                 free(fbuff2);
@@ -141,7 +161,7 @@ void handle_request(int socketfd)
                                         fbuff4 = (char*)calloc(buff_max_size,sizeof(char));
                                         if(fbuff4 == NULL) printf("fbuff2 mem not allocated\n\n");
 
-                                        n = recv(socketfd, fbuff4, buff_max_size, 0);
+                                        //n = recv(socketfd, fbuff4, buff_max_size, 0);
                                         //strncpy(fbuff3, recv_buff, f2_size);
 
                                         sprintf(usr_dir,"%s/%s",root_dir, fname2);
@@ -155,11 +175,28 @@ void handle_request(int socketfd)
                                                 {
                                                         decrypt[l] = recv_buff[l]^key[l%len2];
 
-                                                }
+                                                }*/
 
                                                 
-                                                //printf("\n\n buff size is %d\n", f1_size);*/
-                                                fwrite(fbuff4, f2_size, 1, fp2);
+                                                n=0,n2=0;
+                                                if(f2_size > buff_max_size)                                        
+                                                { 
+                                                while(n2 < f2_size)
+                                                {
+                                                n = recv(socketfd, fbuff4, buff_max_size, 0);
+                                                fwrite(fbuff4, n, 1, fp2);
+                                                bzero(fbuff4, sizeof(fbuff4));
+                                                n2 = n2 + n;
+                                                }
+                                                printf("************ received 2nd n2 : %d\n", n2);
+                                                }
+
+                                                else
+                                                {
+                                                n = recv(socketfd, fbuff4, f2_size, 0);
+                                                fwrite(fbuff4, n, 1, fp2);
+                                                bzero(fbuff4, sizeof(fbuff4));
+                                                }
 
                                                 fclose(fp2);
                                                 free(fbuff4);
@@ -190,7 +227,7 @@ void handle_request(int socketfd)
                         {
                                 sscanf(fbuff1, "%s %s %s %s %d", req_method, subfolder, username_rec, password_rec, &server_no);
                                 printf("Request : %s %s %s %s %d", req_method, subfolder, username_rec, password_rec, server_no);
-
+                                valid_user=0;
                                 for(int d=0; d<num_users ; d++)
                                 {
                                         if( ((strcmp(Users[2*d], username_rec) == 0) && (strcmp(Users[2*d+1], password_rec) == 0)) ) valid_user=1;
@@ -248,7 +285,7 @@ void handle_request(int socketfd)
 
                                 sscanf(fbuff1, "%s %s %s %s %d", req_method, subfolder, username_rec, password_rec, &server_no);
                                 printf("Request : %s %s %s %s %d\n", req_method, subfolder, username_rec, password_rec, server_no);       
-
+                                valid_user=0;
                                 for(int d=0; d<num_users; d++)
                                 {
                                         if( ((strcmp(Users[2*d], username_rec) == 0) && (strcmp(Users[2*d+1], password_rec) == 0)) ) valid_user=1;
@@ -353,7 +390,7 @@ void handle_request(int socketfd)
                                 
                                 sscanf(fbuff1, "%s %s %s %s %s %d %d", req_method, fname1, subfolder, username_rec, password_rec, &server_no, &req_version);
                                 printf("Request : %s %s %s %s %s %d %d\n", req_method, fname1, subfolder, username_rec, password_rec, server_no, req_version);
-
+                                valid_user=0;
                                 for(int d=0; d<num_users; d++)
                                 {
                                         if( ((strcmp(Users[2*d], username_rec) == 0) && (strcmp(Users[2*d+1], password_rec) == 0)) ) valid_user=1;
