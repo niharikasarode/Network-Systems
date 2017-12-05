@@ -94,6 +94,31 @@ void sendto_server(int socketfd, int server_no, char *filename, char *buf1, int 
 
 }
 
+void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Username, char *Password, int server_no)
+{
+
+                        sprintf(send_buff, "%s %s %s %s %d", req_type, sub_folder, Username, Password, server_no);
+                        send(socketfd, send_buff, strlen(send_buff), 0 );
+                        
+                        bzero(rec_buff1, sizeof(rec_buff1));
+                        int rec = recv(socketfd, rec_buff1, 90, 0);
+                       
+                        if(strncmp(rec_buff1, "ACK", 3) == 0)
+                        {
+                                sprintf(send_buff, "Now send directory contents");
+                                send(socketfd, send_buff, strlen(send_buff), 0 );
+
+                                bzero(rec_buff1, sizeof(rec_buff1));
+                                int rec = recv(socketfd, rec_buff1, 90, 0);
+                                printf("\n\n Directory contents under DFS %d 's subfolder :\n ", server_no);
+                                char *token;
+                                puts(rec_buff1);
+                        }
+
+
+
+
+}
 
 int main(int argc, char **argv)
 {
@@ -343,7 +368,25 @@ int main(int argc, char **argv)
 
                 }
 
-                
+                else if( strncmp(cmd, "LIST", 4) == 0)
+                {
+                        char *tok;
+                        tok = strtok(cmd, " ");
+                        strncpy(req_method, tok, strlen(tok));
+                        puts(req_method);
+                        tok = strtok(NULL, " \t\n");
+                        strncpy(subfolder, tok, strlen(tok));
+                        puts(subfolder);
+
+
+
+                        get_dircontents(sockfd1, req_method, subfolder, username, password, 1);
+                        get_dircontents(sockfd2, req_method, subfolder, username, password, 2);
+                        get_dircontents(sockfd3, req_method, subfolder, username, password, 3);
+                        get_dircontents(sockfd4, req_method, subfolder, username, password, 4);
+
+                }
+
 
                 else if( strncmp(cmd, "MKDIR", 5) == 0)
                 {
@@ -351,7 +394,7 @@ int main(int argc, char **argv)
                         int rec;
                         tok3 = strtok(cmd, " ");
                         strncpy(req_method, tok3, strlen(tok3));
-                        tok3 = strtok(NULL, " ");
+                        tok3 = strtok(NULL, " \t\n");
                         strncpy(subfolder, tok3, strlen(tok3));
                         printf("Making the subfolder on all servers : ");
                         puts(subfolder);
