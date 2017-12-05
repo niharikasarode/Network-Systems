@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <openssl/md5.h>
+#include <time.h>
 
 #define buff_max_size 99999
 #define MAXLINE 4096 /*max text line length*/
@@ -14,20 +16,87 @@
 #define LISTENQ 8 /*maximum number of client connections*/
 
 
-int listenfd, connfd, site_sock, sock1, n, k, PORT, Cache_Timeout;
-int port_specified, port;
+int listenfd, connfd, site_sock, sock1, n, k, PORT, Cache_Timeout, cache_present;
+int port_specified, port, time_created;
 pid_t childpid;
 socklen_t clilen;
 char buf[MAXLINE];
 struct sockaddr_in cliaddr, servaddr, mainserver_addr;
 char recv_buff[buff_max_size], req_method[10], URL_slash[1024], http_version[10], *url, site[1024], *path;
 char send_request[buff_max_size], rec_buf[buff_max_size], *temp, send_buff[buff_max_size];
-char method_error[2048];
-char version_error[] = "<html><body><h1>ERROR: Invalid HTTP Version</h1></body></html>";
+char cache_dir[2048], Full_md5[100], dir[100];
+char method_error[2048], *conf_buffer, fname[100];
 struct hostent *hp;
-FILE *fp;
+FILE *fp, *f1, *f2;
+time_t time_now;
 
-void handle_request(int socketfd)
+void calculate_md5(char *string)
+{
+
+        unsigned char c[MD5_DIGEST_LENGTH];
+    
+        MD5_CTX mdContext;
+        MD5_Init(&mdContext);
+        MD5_Update(&mdContext, string, strlen(string));
+        MD5_Final(c,&mdContext);
+
+        for(int i = 0; i < MD5_DIGEST_LENGTH; i++) 
+	{
+
+                sprintf(&Full_md5[2*i], "%02x", c[i]);
+   	}
+
+        time_now = time(NULL);
+
+
+}
+
+int check_md5(char *hash_str, int timeout)
+{
+
+        size_t max=200;
+        int temp_var=0;
+        char *tok;
+        conf_buffer = (char *)malloc(max*sizeof(char));
+        bzero(dir, sizeof(dir));
+        strncpy(dir, cache_dir, strlen(cache_dir));
+        strcat(dir,"md5list");
+        printf("File path for list of stored md5: ");
+        puts(dir);
+
+        f1 = fopen(dir, "rb");        
+        if(f1 != NULL)
+        {
+                 while(!feof(f1))
+                {
+                        getline(&conf_buffer,&max,f1);
+                        if(strncmp(conf_buffer, hash_str, strlen(hash_str)) == 0)
+                        {
+                                getline(&conf_buffer,&max,f1);
+                                tok = strtok(conf_buffer, "\n");
+                                time_created = atoi(tok);
+                                time_now = time(NULL);
+                                if((time_now - time_created) < timeout)
+                                {
+                                        temp_var = 5;
+                                        free(conf_buffer);
+                                        fclose(f1);
+                                        return 5;
+                                }
+                                else return 1;   
+                        }
+                }
+
+        }
+        free(conf_buffer);
+        fclose(f1);
+        if(temp_var != 0)
+        {
+                return 1;
+        }
+}
+
+void handle_request(int socketfd, char *cache_directory, int timeout)
 {
 
         printf("\n\n*********************      Handling request listen sock : %d        ******************\n\n", socketfd);
@@ -45,6 +114,8 @@ void handle_request(int socketfd)
         printf("Message received : %s, %s, %s\n", req_method, URL_slash, http_version);
 
 
+
+        /**************         Check request method (ONLY GET SUPPORTED)      ************/
 
         if(strncmp(req_method, "GET", 3) != 0)
         {
@@ -72,6 +143,9 @@ void handle_request(int socketfd)
         
         else
         {
+
+                /****   Removing "//" from http://  ****/
+
                 if(strstr(URL_slash, "//") == NULL)
                 {
                 strncpy(url, URL_slash, strlen(URL_slash));
@@ -84,6 +158,7 @@ void handle_request(int socketfd)
                 port_specified = 0;
         
 
+                /****     Storing path to a file/image (respect to the server) to be sent in GET request  ****/
                 path = strstr(url, "/");
 
                 for(int i=0; i<strlen(url); i++)
@@ -117,65 +192,157 @@ void handle_request(int socketfd)
 
                 else port = 80;
 
-                hp = gethostbyname(site);
-                if(hp == NULL)
+                calculate_md5(url);
+
+                cache_present = check_md5(Full_md5, timeout);
+
+
+                /** Status 5 returned only if cached copy exists and hasn't timedout **/
+                if(cache_present != 5)
                 {
-                        printf("Host :");
-                        puts(site);
-                        printf("ERROR: gethostbyname failed\n");
-                        exit(1);
-                }
-                bzero((char*)&mainserver_addr, sizeof(mainserver_addr));
 
-                printf("actual name - %s\n", hp->h_name);
-                printf("address - %s\n", inet_ntoa(*((struct in_addr *)hp->h_addr)));
+                        printf("Cached copy doesn't exist OR Invalid\n\n");
 
-
-                mainserver_addr.sin_family = AF_INET;
-                mainserver_addr.sin_port = htons(80);
-                bcopy((char*)hp->h_addr, (char*)&mainserver_addr.sin_addr.s_addr,hp->h_length );
-
-                if ((site_sock = socket (AF_INET, SOCK_STREAM, 0)) <0) 
-                {
-                        perror("Problem in creating the main server to site socket");
-                        exit(1);
-                }
-
-                sock1 = connect(site_sock, (struct sockaddr*)&mainserver_addr, sizeof(struct sockaddr));
-                if(sock1 < 0)
-                {
-                printf("ERROR in connecting to mainserver\n");
-                exit(1);
-                }
-
-                printf("Connected to %s on IP : %s\n\n", url, inet_ntoa(*((struct in_addr *)hp->h_addr)));
-
-                if(strlen(path) != 0)
-                sprintf(send_request, "GET %s %s\r\nHost: %s\r\nConnection: close\r\n\r\n", path, http_version, site);
-                else sprintf(send_request, "GET / %s\r\nHost: %s\r\nConnection: close\r\n\r\n", http_version, site);
-
-                printf("Request sent to main server : %s\n\n", send_request);
-
-                n = send(site_sock, send_request, sizeof(send_request), 0);
-
-                if(n<0)
-                printf("Message not sent to main server\n");
-        
-                fp = fopen("page.html", "ab");
-                do
-                {
-                        bzero((char*)rec_buf, buff_max_size);
-                        n = recv(site_sock, rec_buf, buff_max_size, 0);
-                        k = k+n;
-                        fwrite(rec_buf, 1, n, fp);
-                        if(n>0)
+                        char bufer[200];
+                        f1 = fopen(dir, "a");        
+                        if(f1 != NULL)
                         {
-                        int sn = send(socketfd, rec_buf, n, 0 );
+                        
+                                fwrite(Full_md5, 1, strlen(Full_md5), f1);
+                                fwrite("\n", 1, strlen("\n"), f1);
+                                sprintf(bufer, "%ld\n", time_now);
+                                fwrite(bufer, 1, strlen(bufer), f1);
+                                bzero(bufer, sizeof(bufer));
+                                fclose(f1);
                         }
-        
-                }while(n>0);
+                        
+                        hp = gethostbyname(site);
+                        if(hp == NULL)
+                        {
+                                printf("Host :");
+                                puts(site);
+                                printf("ERROR: gethostbyname failed\n");
+                                exit(1);
+                        }
+                        bzero((char*)&mainserver_addr, sizeof(mainserver_addr));
 
-                printf("Done sending to client\n");
+                        printf("actual name - %s\n", hp->h_name);
+                        printf("address - %s\n", inet_ntoa(*((struct in_addr *)hp->h_addr)));
+
+
+                        mainserver_addr.sin_family = AF_INET;
+                        mainserver_addr.sin_port = htons(80);
+                        bcopy((char*)hp->h_addr, (char*)&mainserver_addr.sin_addr.s_addr,hp->h_length );
+
+                        if ((site_sock = socket (AF_INET, SOCK_STREAM, 0)) <0) 
+                        {
+                                perror("Problem in creating the main server to site socket");
+                                exit(1);
+                        }
+
+                        sock1 = connect(site_sock, (struct sockaddr*)&mainserver_addr, sizeof(struct sockaddr));
+                        if(sock1 < 0)
+                        {
+                        printf("ERROR in connecting to mainserver\n");
+                        exit(1);
+                        }
+
+                        printf("Connected to %s on IP : %s\n\n", url, inet_ntoa(*((struct in_addr *)hp->h_addr)));
+
+                        if(strlen(path) != 0)
+                        sprintf(send_request, "GET %s %s\r\nHost: %s\r\nConnection: keep-alive\r\n\r\n", path, http_version, site);
+                        else sprintf(send_request, "GET / %s\r\nHost: %s\r\nConnection: keep-alive\r\n\r\n", http_version, site);
+
+                        printf("Request sent to main server : %s\n\n", send_request);
+
+                        n = send(site_sock, send_request, sizeof(send_request), 0);
+
+                        if(n<0)
+                        printf("Message not sent to main server\n");
+
+                        /**** Check if a timed-out cached copy exists and delete****/
+
+
+                        sprintf(fname, "./cache/%s.html",Full_md5);
+                        if(access(fname, F_OK) == 0)
+                        {
+                                printf("Cached but timed out copy exists.. deleting it n creating new .. \n");
+                                int status = remove(fname);
+                                if(status == 0) 
+                                printf("Deleted cached copy.\n");
+                        }
+                        fp = fopen(fname, "ab");
+                        do
+                        {
+                                bzero((char*)rec_buf, buff_max_size);
+                                n = recv(site_sock, rec_buf, buff_max_size, 0);
+                                k = k+n;
+                                fwrite(rec_buf, 1, n, fp);
+                                if(n>0)
+                                {
+                                        int sn = send(socketfd, rec_buf, n, 0 );
+                                }
+        
+                        }while(n>0);
+                        fclose(fp);
+                        printf("Done sending to client\n");
+                }
+
+                /** if status after check is 5, non-timedout copy exists which can be used to send back to client **/
+                else if(cache_present == 5)
+                {
+
+                        printf("\n Valid cacned copy exists\n\n");
+                        sprintf(fname, "./cache/%s.html",Full_md5);
+                        fp = fopen(fname, "rb");
+                        int n,d,fsize=0, size_flag=0;
+                        char buff[buff_max_size];
+                        if(fp != NULL)
+                        {
+                                fseek(fp, 0 , SEEK_END);
+                                fsize = ftell(fp);
+                                fseek(fp, 0 , SEEK_SET);
+                                fclose(fp);
+                        }
+                        
+                        if(fsize>buff_max_size) 
+                        size_flag=1;
+
+                        fp = fopen(fname, "rb");
+                        if(fp != NULL)
+                        {
+                                if(size_flag == 1)
+                                {
+                                        int div = fsize/buff_max_size;
+                                        int mod = fsize%buff_max_size;
+                                        do
+                                        {
+                                                fread(buff, buff_max_size, sizeof(char), fp);
+                                                int dn = send(socketfd, buff, buff_max_size, 0);
+                                                bzero(buff, sizeof(buff));
+                                                n = n+dn;  
+                                                div--;
+
+                                        }while(div>0);
+
+                                        fread(buff, mod, sizeof(char), fp);
+                                        int dn = send(socketfd, buff, buff_max_size, 0);
+                                        n = n+dn;
+                                        printf("size_flag=1, sent %d bytes\n", n);
+                                }
+                                else
+                                {
+                                        fread(buff, fsize, sizeof(char), fp);
+                                        int ln = send(socketfd, buff, fsize, 0);
+                                        bzero(buff, sizeof(buff));
+                                        printf("size_flag=o, sent %d bytes\n", ln);
+                                }
+                        }
+     
+                }   // else case where valid cached copy exists
+
+
+
         }
         
 }
@@ -196,6 +363,8 @@ int main (int argc, char **argv)
 
         PORT = atoi(argv[1]);
         Cache_Timeout = atoi(argv[2]);
+
+        sprintf(cache_dir, "./cache/");
         printf("Arguments rec: %d %d\n\n", PORT, Cache_Timeout);
 
 
@@ -242,7 +411,7 @@ int main (int argc, char **argv)
                         printf ("\n%s\n","Child created for dealing with client requests");
                         //close listening socket
                         
-                        handle_request(connfd);
+                        handle_request(connfd, cache_dir, Cache_Timeout);
                 }
         }
         close(connfd);
