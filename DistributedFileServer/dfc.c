@@ -12,11 +12,12 @@
 
 #define MAXLINE 400 /*max text line length*/
 #define SERV_PORT 3000
-
+#define buff_max_size 99999
 
 FILE *conf;
 char dfc_conf[30], *conf_buffer, username[20], password[20], cmd[60];
-char filename[30];
+char filename[30], *fbuff1_ptr, *fbuff2_ptr, *fbuff3_ptr, *fbuff4_ptr;
+char fbuff1[buff_max_size], fbuff2[buff_max_size], fbuff3[buff_max_size], fbuff4[buff_max_size];
 int port[4];
 int sockfd1, sockfd2, sockfd3, sockfd4 ;
 struct sockaddr_in servaddr;
@@ -38,11 +39,16 @@ void extract_ports(char *buff1, int i)
 
 
 
+
 int main(int argc, char **argv)
 {
        
         char sendline[MAXLINE], recvline[MAXLINE];
         strncpy(sendline, "Send this please work", 21);
+        fbuff1_ptr = (char *)malloc(buff_max_size*sizeof(char));
+        fbuff2_ptr = (char *)malloc(buff_max_size*sizeof(char));
+        fbuff3_ptr = (char *)malloc(buff_max_size*sizeof(char));
+        fbuff4_ptr = (char *)malloc(buff_max_size*sizeof(char));
 
         //basic check of the arguments
         //additional checks can be inserted
@@ -202,7 +208,26 @@ int main(int argc, char **argv)
                 int mod = mod_from_md5(filename);
                 printf("mod : %d\n", mod);
 
-                file_divide(filename);
+                file_divide(filename, fbuff1, fbuff2, fbuff3, fbuff4);
+
+                printf(" ********************************** Part 1 ************************************** \n");
+                puts(fbuff1);
+                printf(" ********************************** Part 2 ************************************** \n");
+                puts(fbuff2);
+                printf(" ********************************** Part 3 ************************************** \n");
+                puts(fbuff3);
+                printf(" ********************************** Part 4 ************************************** \n");
+                puts(fbuff4);               
+
+                /*switch(mod):
+
+                        case 0: 
+
+                        case 1:
+
+                        case 2:
+
+                        case 3:*/
                 
         }
 
