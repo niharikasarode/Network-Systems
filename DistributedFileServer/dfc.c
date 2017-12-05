@@ -26,8 +26,12 @@ int port[4], b_size[4], chunk_size,rem_size;
 int sockfd1, sockfd2, sockfd3, sockfd4 ;
 struct sockaddr_in servaddr;
 size_t max = 200;
-int svar=0;
+int svar=0, ver_num=0;
 
+struct valid_file{
+char fl[100];
+int vr;
+};
 
 struct fileversions{
 
@@ -37,7 +41,7 @@ int version;
 };
 
 struct fileversions fv[1000], fv_ptr;
-
+struct valid_file vf[1000];
 
 void store_version(char *str)
 {
@@ -55,11 +59,11 @@ void store_version(char *str)
         strcat(file1, tok);
 
         strncpy(fv[svar].file_name, file1, strlen(file1));
-        printf(" %d file :%s\n ", svar, fv[svar].file_name);
+        //printf(" %d file :%s\n ", svar, fv[svar].file_name);
         tok = strtok(NULL, ".");
         vers = atoi(tok);
         fv[svar].version = vers;
-        printf(" %d file :%d\n ", svar, fv[svar].version);
+        //printf(" %d file :%d\n ", svar, fv[svar].version);
         svar++;
 }
 
@@ -166,7 +170,7 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
                                                 if(h>1)
                                                 {
                                                         *(DFS1_list + h) = rec_buff1;                                                
-                                                        printf("%s\n", DFS1_list[h] );
+                                                        //printf("%s\n", DFS1_list[h] );
                                                         store_version(*(DFS1_list + h));
                                                 }                                                
                                                 send(socketfd, "ACK", 3,0);
@@ -198,7 +202,7 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
                                                 if(h>1)
                                                 {  
                                                         *(DFS2_list + h) = rec_buff1;                                              
-                                                        printf("%s\n", DFS2_list[h] );
+                                                        //printf("%s\n", DFS2_list[h] );
                                                         store_version(*(DFS2_list + h));
                                                 }
                                                 send(socketfd, "ACK", 3,0); 
@@ -222,7 +226,7 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
                                                 if(h>1)
                                                 {
                                                         *(DFS3_list + h) = rec_buff1;
-                                                        printf("%s\n", DFS3_list[h] );
+                                                        //printf("%s\n", DFS3_list[h] );
                                                         store_version(*(DFS3_list + h));
                                                 }
                                                 send(socketfd, "ACK", 3,0);
@@ -246,7 +250,7 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
                                                 if(h>1)
                                                 {
                                                         *(DFS4_list + h) = rec_buff1;
-                                                        printf("%s\n", DFS4_list[h] );
+                                                        //printf("%s\n", DFS4_list[h] );
                                                         store_version(*(DFS4_list + h));
                                                 }
                                                 send(socketfd, "ACK", 3,0); 
@@ -527,6 +531,7 @@ int main(int argc, char **argv)
                         bzero(DFS3_count, sizeof(DFS3_count));
                         bzero(DFS4_count, sizeof(DFS4_count));
                         memset(fv, 0, 100*sizeof(struct fileversions));
+                        memset(vf, 0, 100*sizeof(struct fileversions));
 
                         svar = 0;
                         get_dircontents(sockfd1, req_method, subfolder, username, password, 1);
@@ -536,12 +541,55 @@ int main(int argc, char **argv)
 
 
                         int yu = DFS1_count[0] +  DFS2_count[0] +  DFS3_count[0] +  DFS4_count[0];
-                                
-                                for(int m=0; m<(yu-8); m++)             // 2 dirs escaped in each DFS : . & ..
+                            yu = yu - 8;      
+                                /*for(int m=0; m<yu; m++)             // 2 dirs escaped in each DFS : . & ..
                                 {
                                         printf(" Structur %d has file %s and version %d\n", m, fv[m].file_name, fv[m].version);
 
+                                }*/ 
+                                int m,a;
+                
+                        /****  From the array of structures, each struct where all filenames received from DFSs are save, 
+                                compare each with a valid file structure, which is btw initially set to 0, if no filename is 
+                                present in valid file struct, then populate it. if matching filename, then update the version number
+                                for version 1,2,3,4 -------   011110 denotes all versions present  ******/
+
+                                for( m=0; m<yu; m++)             
+                                {
+                                        for( a=0; a<yu; a++)
+                                        {            
+                                                if(strcmp(fv[m].file_name , vf[a].fl) == 0) break;
+                                                else if(vf[a].fl[0] == 0) break;
+                                        }
+
+                                        if(vf[a].fl[0] == 0)
+                                        {
+                                                strcpy(vf[a].fl,fv[m].file_name);
+                                                vf[a].vr |= 1 << fv[m].version;
+                                        }
+
+                                        else if(strcmp(fv[m].file_name , vf[a].fl) == 0)
+                                        {
+                                                vf[a].vr |= 1 << fv[m].version;
+                                        }
                                 }
+                                
+                                printf("\n\n **************************  LIST RESULTS  ***************************\n\n");
+                                for(int d=0; d<100; d++)
+                                {
+                                        if(vf[d].vr == 30) printf(" %d. %s Full File\n", d+1, vf[d].fl);
+                                        else if( (vf[d].vr > 0) &&(vf[d].vr < 30)) printf(" %d. %s Full File\n", d+1, vf[d].fl);
+                                        else if( vf[0].fl[0] == 0)
+                                        {
+                                                 printf("\n THE DFS SERVERS DONT HAVE ANY FILES :( \n");
+                                                 break;
+                                        }
+                                        else if(vf[d].fl[0] == 0) break;
+
+                                }
+
+
+
                         svar=0;
 
                 }
