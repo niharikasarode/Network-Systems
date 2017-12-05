@@ -61,6 +61,195 @@ int available_versions;
 
 struct srvr_contains v_number;
 
+void connect_servers(void)
+{
+
+
+        //Creation of the socket
+       if ((sockfd1 = socket (AF_INET, SOCK_STREAM, 0)) <0) {
+        perror("Problem in creating the socket");
+        exit(2);
+        }
+
+        //Creation of the socket
+        memset(&servaddr, 0, sizeof(servaddr));
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
+        servaddr.sin_port =  htons(port[0]); //convert to big-endian order
+
+        //Connection of the client to the socket
+        if (connect(sockfd1, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
+        {
+        server1_down_flag =1;
+        perror("Problem in connecting to the server");
+        //exit(3);
+        }
+        
+
+        servaddr.sin_port =  htons(port[1]); //convert to big-endian order
+
+        if ((sockfd2 = socket (AF_INET, SOCK_STREAM, 0)) <0)
+        {
+                perror("Problem in creating the socket");
+                exit(2);
+        }
+       
+
+        if (connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
+        {
+                server2_down_flag =1;
+                perror("Problem in connecting to the server");
+                //exit(3);
+        }
+       
+
+
+        servaddr.sin_port =  htons(port[2]); //convert to big-endian order
+        if ((sockfd3 = socket (AF_INET, SOCK_STREAM, 0)) <0)
+        {
+                perror("Problem in creating the socket");
+                exit(2);
+        }
+
+
+        
+        if (connect(sockfd3, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
+        {
+                server3_down_flag =1;
+                perror("Problem in connecting to the server");
+                //exit(3);
+        }
+
+
+
+        servaddr.sin_port =  htons(port[3]); //convert to big-endian order
+        if ((sockfd4 = socket (AF_INET, SOCK_STREAM, 0)) <0)
+        {
+                perror("Problem in creating the socket");
+                exit(2);
+        }
+
+
+        if (connect(sockfd4, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
+        {
+                server4_down_flag =1;
+                perror("Problem in connecting to the server");
+                //exit(3);
+        }
+
+
+}
+
+void connect_server1(void)
+{
+        if ((sockfd1 = socket (AF_INET, SOCK_STREAM, 0)) <0) {
+        perror("Problem in creating the socket");
+        exit(2);
+        }
+
+        //Creation of the socket
+        memset(&servaddr, 0, sizeof(servaddr));
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
+        servaddr.sin_port =  htons(port[0]); //convert to big-endian order
+
+        //Connection of the client to the socket
+        if (connect(sockfd1, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
+        {
+        server1_down_flag =1;
+        perror("Problem in connecting to the server");
+        //exit(3);
+        }
+}
+
+void connect_server2(void)
+{
+        if ((sockfd2 = socket (AF_INET, SOCK_STREAM, 0)) <0) {
+        perror("Problem in creating the socket");
+        exit(2);
+        }
+
+        //Creation of the socket
+        memset(&servaddr, 0, sizeof(servaddr));
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
+        servaddr.sin_port =  htons(port[1]); //convert to big-endian order
+
+        //Connection of the client to the socket
+        if (connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
+        {
+        server2_down_flag =1;
+        perror("Problem in connecting to the server");
+        //exit(3);
+        }
+}
+
+void connect_server3(void)
+{
+        if ((sockfd3 = socket (AF_INET, SOCK_STREAM, 0)) <0) {
+        perror("Problem in creating the socket");
+        exit(2);
+        }
+
+        //Creation of the socket
+        memset(&servaddr, 0, sizeof(servaddr));
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
+        servaddr.sin_port =  htons(port[2]); //convert to big-endian order
+
+        //Connection of the client to the socket
+        if (connect(sockfd3, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
+        {
+        server3_down_flag =1;
+        perror("Problem in connecting to the server");
+        //exit(3);
+        }
+}
+
+void connect_server4(void)
+{
+        if ((sockfd4 = socket (AF_INET, SOCK_STREAM, 0)) <0) {
+        perror("Problem in creating the socket");
+        exit(2);
+        }
+
+        //Creation of the socket
+        memset(&servaddr, 0, sizeof(servaddr));
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
+        servaddr.sin_port =  htons(port[3]); //convert to big-endian order
+
+        //Connection of the client to the socket
+        if (connect(sockfd4, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
+        {
+        server4_down_flag =1;
+        perror("Problem in connecting to the server");
+        //exit(3);
+        }
+}
+
+
+
+
+
+void clear_serverstatus_flags(void)
+{
+
+        server1_down_flag =0;
+        server2_down_flag =0;
+        server3_down_flag =0;
+        server4_down_flag =0;
+}
+
+void close_sockets(void)
+{
+
+        close(sockfd1);
+        close(sockfd2);
+        close(sockfd3);
+        close(sockfd4);
+
+}
 
 void store_version(char *str)
 {
@@ -169,7 +358,7 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
 
 
                         tv.tv_sec = 0;
-                        tv.tv_usec = 1000000;
+                        tv.tv_usec = 800000;
 
                         setsockopt(socketfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
                         sprintf(send_buff, "%s %s %s %s %d", req_type, sub_folder, Username, Password, server_no);
@@ -326,29 +515,15 @@ void get_dircontents(int socketfd, char *req_type, char *sub_folder, char *Usern
 void get_version(int socketfd, char *file_name1, char *sub_folder, char *Username, char *Password, int version_no, int server_no)
 {
 
-        close(socketfd);
-        if ((socketfd = socket (AF_INET, SOCK_STREAM, 0)) <0) {
-        perror("Problem in creating the socket");
-        exit(2);
-        }
-        servaddr.sin_port =  htons(port[server_no -1]); //convert to big-endian order
-        if (connect(socketfd, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
-        {
-                perror("Problem in connecting to the server");
-                exit(3);
-        }       
-
-
-
         char decrypt[buff_max_size];        
         bzero(decrypt, sizeof(decrypt));
         char key1[100];
         int key_len = strlen(Password);
         strncpy(key1, Password, key_len);
         tv.tv_sec = 0;
-        tv.tv_usec = 1000000;
+        tv.tv_usec = 800000;
 
-        setsockopt(sockfd1, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        setsockopt(socketfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         memset(send_buff, 0, sizeof(send_buff));
         
         sprintf(usr_dir, "./DFC/%s", file_name1);
@@ -539,72 +714,7 @@ int main(int argc, char **argv)
 
                                                                                                      
         
-        //Creation of the socket
-       if ((sockfd1 = socket (AF_INET, SOCK_STREAM, 0)) <0) {
-        perror("Problem in creating the socket");
-        exit(2);
-        }
 
-        //Creation of the socket
-        memset(&servaddr, 0, sizeof(servaddr));
-        servaddr.sin_family = AF_INET;
-        servaddr.sin_addr.s_addr= inet_addr("127.0.0.1");
-        servaddr.sin_port =  htons(port[0]); //convert to big-endian order
-
-        //Connection of the client to the socket
-        if (connect(sockfd1, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) {
-        perror("Problem in connecting to the server");
-        exit(3);
-        }
-        
-
-        servaddr.sin_port =  htons(port[1]); //convert to big-endian order
-
-        if ((sockfd2 = socket (AF_INET, SOCK_STREAM, 0)) <0)
-        {
-                perror("Problem in creating the socket");
-                exit(2);
-        }
-       
-
-        if (connect(sockfd2, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
-        {
-                perror("Problem in connecting to the server");
-                exit(3);
-        }
-       
-
-
-        servaddr.sin_port =  htons(port[2]); //convert to big-endian order
-        if ((sockfd3 = socket (AF_INET, SOCK_STREAM, 0)) <0)
-        {
-                perror("Problem in creating the socket");
-                exit(2);
-        }
-
-
-        
-        if (connect(sockfd3, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
-        {
-                perror("Problem in connecting to the server");
-                exit(3);
-        }
-
-
-
-        servaddr.sin_port =  htons(port[3]); //convert to big-endian order
-        if ((sockfd4 = socket (AF_INET, SOCK_STREAM, 0)) <0)
-        {
-                perror("Problem in creating the socket");
-                exit(2);
-        }
-
-
-        if (connect(sockfd4, (struct sockaddr *) &servaddr, sizeof(servaddr))<0) 
-        {
-                perror("Problem in connecting to the server");
-                exit(3);
-        }
         
 
         server_upflag=0;
@@ -633,6 +743,8 @@ int main(int argc, char **argv)
                 puts(cmd);
                 if( (strncmp(cmd, "PUT", 3) == 0) || (strncmp(cmd, "put", 3) == 0) || ( strncmp(cmd, "GET", 3) == 0) || (strncmp(cmd, "get", 3) == 0) ) 
                 {
+
+                        
                         sscanf(cmd, "%s %s %s", req_method, filename, subfolder);
                         if( strlen(filename) > 1)
                         {
@@ -640,6 +752,9 @@ int main(int argc, char **argv)
                                 {
                                         if( (strncmp(req_method, "PUT", 3) == 0) ||   (strncmp(req_method, "put", 3) == 0) )
                                         {
+                                                connect_servers();
+                                                printf("\n\n Connected ..\n\n");
+
                         
                                                 int mod = mod_from_md5(filename);
                                                 printf("mod : %d\n", mod);
@@ -712,6 +827,8 @@ int main(int argc, char **argv)
                                                 free(fbuff2);
                                                 free(fbuff3);
                                                 free(fbuff4);
+
+                                                close_sockets();
                 
                                         } // if command put
 
@@ -719,6 +836,8 @@ int main(int argc, char **argv)
                                         else if( (strncmp(req_method, "GET", 3) == 0 ) || (strncmp(req_method, "get", 3) == 0 ) )
                                         {
 
+                                                connect_servers();
+                                                printf("\n\n Connected ..\n\n");
 
                                                 f_ver1 = (char*) calloc(buff_max_size , sizeof(char));
                                                 if(f_ver1 == NULL) printf("No memory alloc 1\n");
@@ -743,85 +862,173 @@ int main(int argc, char **argv)
                                                 int server_num = 1;      
                                                 do
                                                 {       
-                                                if(server_num == 1) get_version(sockfd1, filename, subfolder, username, password, 1, server_num);
-                                                else if(server_num == 2) get_version(sockfd2, filename, subfolder, username, password, 1, server_num);
-                                                else if(server_num == 3) get_version(sockfd3, filename, subfolder, username, password, 1, server_num);
-                                                else if(server_num == 4) get_version(sockfd4, filename, subfolder, username, password, 1, server_num);
+                                                if(server_num == 1)
+                                                {
+                                                        if(server1_down_flag == 0) get_version(sockfd1, filename, subfolder, username, password, 1, server_num);
+                                                }
+                                                 else if(server_num == 2)
+                                                {
+                                                        if(server2_down_flag == 0) get_version(sockfd2, filename, subfolder, username, password, 1, server_num);
+                                                }
+                                                else if(server_num == 3)
+                                                {
+                                                         if(server3_down_flag == 0) get_version(sockfd3, filename, subfolder,username, password, 1, server_num);
+                                                }
+                                                else if(server_num == 4)
+                                                {
+                                                        if(server4_down_flag == 0) get_version(sockfd4, filename, subfolder, username, password, 1, server_num);
+                                                }
+                                                
                                                         server_num++;
                                                 }while( (version_obtainedflag != 2) && (server_num <5));              
-                                                                                // version_obtainedflag = 04312 if all versions 
+                                                close_sockets();
+
+
+
 
                                                 server_num = 1;      
                                                 do
                                                 {       
                                                 if(server_num == 1)
                                                 {
-                                                        if(server1_down_flag == 0) get_version(sockfd1, filename, subfolder, username, password, 2, server_num);
+                                                        if(server1_down_flag == 0)
+                                                        {
+                                                                connect_server1();                
+                                                                get_version(sockfd1, filename, subfolder, username, password, 2, server_num);
+                                                                close(sockfd1);
+                                                        }
                                                 }
                                                 else if(server_num == 2)
                                                 {
-                                                        if(server2_down_flag == 0) get_version(sockfd2, filename, subfolder, username, password, 2, server_num);
+                                                        if(server2_down_flag == 0)
+                                                        {
+                                                                connect_server2();                
+                                                                get_version(sockfd2, filename, subfolder, username, password, 2, server_num);
+                                                                close(sockfd2);
+                                                        }
                                                 }
                                                 else if(server_num == 3)
                                                 {
-                                                         if(server3_down_flag == 0) get_version(sockfd3, filename, subfolder, username, password, 2, server_num);
+                                                        if(server3_down_flag == 0)
+                                                        {
+                                                                connect_server3();                
+                                                                get_version(sockfd3, filename, subfolder, username, password, 2, server_num);
+                                                                close(sockfd3);
+                                                        }
                                                 }
                                                 else if(server_num == 4)
                                                 {
-                                                        if(server4_down_flag == 0) get_version(sockfd4, filename, subfolder, username, password, 2, server_num);
+                                                       if(server4_down_flag == 0)
+                                                        {
+                                                                connect_server4();                
+                                                                get_version(sockfd4, filename, subfolder, username, password, 2, server_num);
+                                                                close(sockfd4);
+                                                        }
                                                 }
                                                 server_num++;
 
 
                                                 }while( (version_obtainedflag <= 3) && (server_num <5));
-               
+
+
+
+
+
+
+
                                                 server_num = 1;      
                                                 do
                                                 {       
                                                 if(server_num == 1)
                                                 {
-                                                        if(server1_down_flag == 0) get_version(sockfd1, filename, subfolder, username, password, 3, server_num);
+                                                        if(server1_down_flag == 0)
+                                                        {
+                                                                connect_server1();                
+                                                                get_version(sockfd1, filename, subfolder, username, password, 3, server_num);
+                                                                close(sockfd1);
+                                                        }
                                                 }
                                                 else if(server_num == 2)
                                                 {
-                                                        if(server2_down_flag == 0) get_version(sockfd2, filename, subfolder, username, password, 3, server_num);
+                                                        if(server2_down_flag == 0)
+                                                        {
+                                                                connect_server2();                
+                                                                get_version(sockfd2, filename, subfolder, username, password, 3, server_num);
+                                                                close(sockfd2);
+                                                        }
                                                 }
                                                 else if(server_num == 3)
                                                 {
-                                                         if(server3_down_flag == 0) get_version(sockfd3, filename, subfolder, username, password, 3, server_num);
+                                                         if(server3_down_flag == 0)
+                                                        {
+                                                                connect_server3();                
+                                                                get_version(sockfd3, filename, subfolder, username, password, 3, server_num);
+                                                                close(sockfd3);
+                                                        }
                                                 }
                                                 else if(server_num == 4)
                                                 {
-                                                        if(server4_down_flag == 0) get_version(sockfd4, filename, subfolder, username, password, 3, server_num);
+                                                        if(server4_down_flag == 0)
+                                                        {
+                                                                connect_server4();                
+                                                                get_version(sockfd4, filename, subfolder, username, password, 3, server_num);
+                                                                close(sockfd4);
+                                                        }
                                                 }
                                                 server_num++;
 
                                                 }while( (version_obtainedflag <= 7) && (server_num <5));
 
+
+
+
+
+
+
                                                 server_num = 1;      
                                                 do
                                                 {       
                                                 if(server_num == 1)
                                                 {
-                                                        if(server1_down_flag == 0) get_version(sockfd1, filename, subfolder, username, password, 4, server_num);
+                                                        if(server1_down_flag == 0)
+                                                        {
+                                                                connect_server1();                
+                                                                get_version(sockfd1, filename, subfolder, username, password, 4, server_num);
+                                                                close(sockfd1);
+                                                        }
                                                 }
                                                 else if(server_num == 2)
                                                 {
-                                                        if(server2_down_flag == 0) get_version(sockfd2, filename, subfolder, username, password, 4, server_num);
+                                                        if(server2_down_flag == 0)
+                                                        {
+                                                                connect_server2();                
+                                                                get_version(sockfd2, filename, subfolder, username, password, 4, server_num);
+                                                                close(sockfd2);
+                                                        }
                                                 }
                                                 else if(server_num == 3)
                                                 {
-                                                         if(server3_down_flag == 0) get_version(sockfd3, filename, subfolder, username, password, 4, server_num);
+                                                         if(server3_down_flag == 0)
+                                                        {
+                                                                connect_server3();                
+                                                                get_version(sockfd3, filename, subfolder, username, password, 4, server_num);
+                                                                close(sockfd3);
+                                                        }
                                                 }
                                                 else if(server_num == 4)
                                                 {
-                                                        if(server4_down_flag == 0) get_version(sockfd4, filename, subfolder, username, password, 4, server_num);
+                                                        if(server4_down_flag == 0)
+                                                        {
+                                                                connect_server4();                
+                                                                get_version(sockfd4, filename, subfolder, username, password, 4, server_num);
+                                                                close(sockfd4);
+                                                        }
                                                 }
                                                 server_num++;
                                                 req_ver4 = 1;
                                                 }while( (version_obtainedflag <= 15) && (server_num <5));
-                
-                                         
+                                                //close_sockets();
+                                                clear_serverstatus_flags();
                 
                                                 if(req_ver4 == 1)
                                                 {
@@ -884,6 +1091,9 @@ int main(int argc, char **argv)
                                 if( (strncmp(req_method, "LIST", 4) == 0) || (strncmp(req_method, "list", 4) == 0) )
                                 {
                         
+                                        connect_servers();
+                                        printf("\n\n Connected ..\n\n");
+
                                         bzero(DFS1_count, sizeof(DFS1_count));
                                         bzero(DFS2_count, sizeof(DFS2_count));
                                         bzero(DFS3_count, sizeof(DFS3_count));
@@ -893,10 +1103,10 @@ int main(int argc, char **argv)
 
                                         svar = 0;
                        
-                                        get_dircontents(sockfd1, req_method, subfolder, username, password, 1);
-                                        get_dircontents(sockfd2, req_method, subfolder, username, password, 2);
-                                        get_dircontents(sockfd3, req_method, subfolder, username, password, 3);
-                                        get_dircontents(sockfd4, req_method, subfolder, username, password, 4);
+                                        if(server1_down_flag == 0) get_dircontents(sockfd1, req_method, subfolder, username, password, 1);
+                                        if(server2_down_flag == 0) get_dircontents(sockfd2, req_method, subfolder, username, password, 2);
+                                        if(server3_down_flag == 0) get_dircontents(sockfd3, req_method, subfolder, username, password, 3);
+                                        if(server4_down_flag == 0) get_dircontents(sockfd4, req_method, subfolder, username, password, 4);
 
                                         int yu =0;
                                         yu = DFS1_count[0] +  DFS2_count[0] +  DFS3_count[0] +  DFS4_count[0];
@@ -958,12 +1168,17 @@ int main(int argc, char **argv)
 
                                         svar=0;
 
-
+                                        close_sockets();
+                                        clear_serverstatus_flags();
                                 }       // if req_method = LIST
 
 
                                 else if( (strncmp(req_method, "MKDIR", 5) == 0) || (strncmp(req_method, "mkdir", 5) == 0) )
                                 {
+
+                                        connect_servers();
+                                        printf("\n\n Connected ..\n\n");
+
                         
                                                 /**************************/
                                         sprintf(send_buff, "%s %s %s %s %d", req_method, subfolder, username, password, 1);
@@ -1002,7 +1217,7 @@ int main(int argc, char **argv)
                                         puts(rec_buff1);
 
 
-
+                                        close_sockets();
                                 }       // else if req_method = MKDIR
 
 

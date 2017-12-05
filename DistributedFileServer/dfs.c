@@ -508,6 +508,7 @@ void handle_request(int socketfd)
                         exit(1);
                 }
                 close(connfd);
+                exit(0);
 
 }
 
