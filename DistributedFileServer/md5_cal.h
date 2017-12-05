@@ -103,7 +103,7 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
 
         /************************************ File read, encrypted n written in another **************************************************/
 
-        for(int i=0; i <len; i++)
+        /*for(int i=0; i <len; i++)
         {
                 encrypted[i] = fbuff[i]^key[i%len2];
         }
@@ -119,9 +119,9 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
         {
                 printf("Could not encrypt");
         }
-        fclose(fen);
+        fclose(fen);*/
 
-        fp = fopen("filename", "rb");
+        fp = fopen(filename, "rb");
         if( fp != NULL)
         {
 
@@ -144,6 +144,10 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
                         exit(1);
                 }
 
+                for(int i=0; i <chunk; i++)
+                {
+                        file_prt1[i] = file_prt1[i]^key[i%(len2)];
+                }
 
                 /***** 2 ****/
 
@@ -156,13 +160,10 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
                         printf("File not read");
                         exit(1);
                 }
-                printf("**************************************************************************\n");
-                
-                for(int d=0; d<arr[1]; d++)
+                for(int i=0; i <chunk; i++)
                 {
-                        decrypted[d] = file_prt2[d]^key[d%len2];
+                        file_prt2[i] = file_prt2[i]^key[i%(len2)];
                 }
-                puts(decrypted);
 
                 /**** 3 *****/
 
@@ -175,7 +176,10 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
                         printf("File not read");
                         exit(1);
                 }
-
+                for(int i=0; i <chunk; i++)
+                {
+                        file_prt3[i] = file_prt3[i]^key[i%(len2)];
+                }
                
 
                 /***** 4 ****/
@@ -186,10 +190,18 @@ void file_divide(char *filename, char *file_prt1, char *file_prt2, char *file_pr
                 if(rem == 0)
                 {
                         arr[3] = fread(file_prt4, sizeof(char), chunk, fp);
+                        for(int i=0; i <chunk; i++)
+                        {
+                                file_prt4[i] = file_prt4[i]^key[i%(len2)];
+                        }
                 }                
                 else
                 {
                         arr[3] = fread(file_prt4, sizeof(char), rem, fp);
+                        for(int i=0; i <chunk; i++)
+                        {
+                                file_prt4[i] = file_prt4[i]^key[i%(len2)];
+                        }
                 }
 
                 if(arr[3] < 0)
