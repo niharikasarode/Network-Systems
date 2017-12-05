@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <openssl/md5.h>
+#include <dirent.h>
+#include <errno.h>
 #include "md5_cal.h"
 
 #define MAXLINE 400 /*max text line length*/
@@ -41,19 +43,44 @@ void sendto_server(int socketfd, char *filename, char *buf1, int suffix1, char *
         int rec, len1 = strlen(buf1);
         int len2 = strlen(buf2);
         char fname1[30], fname2[30], rec_buff[90];
-        sprintf(fname1, ".%s.%d", filename, suffix1);
-        sprintf(fname2, ".%s.%d", filename, suffix2);
+        bzero(rec_buff, sizeof(rec_buff));
+
+        sprintf(fname1, "%s", "buff1.txt");
+        //sprintf(fname2, ".%s.%d", filename, suffix2);
         sprintf(send_buff,"%s %s %d %s %d %s %s ", req_type, fname1, len1, fname2, len2, Username, Password);
-        puts(send_buff);
+        //puts(send_buff);
         send(socketfd, send_buff, strlen(send_buff), 0);
         
 
 
         rec = recv(socketfd, rec_buff, 90, 0);
-        printf("Server says : ");
+        printf("\n\n Server says : ");
         puts(rec_buff);
-        //write(socketfd, buf1, strlen(buf1));
-        //send(socketfd, buf2, sizeof(buf2), 0);
+
+
+        if(strncmp(rec_buff, "ACK",3) == 0)
+        {
+                send(socketfd, buf1, strlen(buf1), 0);
+
+                bzero(rec_buff, sizeof(rec_buff));
+                rec = recv(socketfd, rec_buff, 90, 0);
+                printf("\n\n Server says : ");
+                puts(rec_buff);
+
+                /*if(strncmp(rec_buff, "ACK",3) == 0)
+                {
+                        bzero(rec_buff, sizeof(rec_buff));
+                        
+                        send(socketfd, buf1, strlen(buf1), 0);
+                        rec = recv(socketfd, rec_buff, 90, 0);
+                        printf("\n\n Server says : ");
+                        puts(rec_buff);
+
+                }*/
+
+        }
+
+        else printf("Invalid Username/Password. Could not proceed");
 
 
 }
@@ -249,9 +276,9 @@ int main(int argc, char **argv)
                                 case 1:
 
                                         sendto_server(sockfd1, filename, fbuff4, 4, fbuff1, 1, username, password, req_method);
-                                        sendto_server(sockfd2, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
-                                        sendto_server(sockfd3, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
-                                        sendto_server(sockfd4, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
+                                        //sendto_server(sockfd2, filename, fbuff1, 1, fbuff2, 2, username, password, req_method); 
+                                        //sendto_server(sockfd3, filename, fbuff2, 2, fbuff3, 3, username, password, req_method); 
+                                        //sendto_server(sockfd4, filename, fbuff3, 3, fbuff4, 4, username, password, req_method); 
  
 
                                         break; 
