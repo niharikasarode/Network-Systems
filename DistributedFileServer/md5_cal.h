@@ -4,7 +4,7 @@
 int mod_from_md5(char *filename)
 {
     unsigned char c[MD5_DIGEST_LENGTH];
-        char Full_md5[50], LastHalf_md5[30];
+    char Full_md5[50], LastHalf_md5[30];
     //char *filename="foo2";
     int i,mod;
     FILE *inFile = fopen (filename, "rb");
