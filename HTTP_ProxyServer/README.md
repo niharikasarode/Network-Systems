@@ -21,12 +21,19 @@ In this program, the server implements the following :
 
 * Multi-threaded Proxy : The proxy handles multiple clients through forking.
  
-*Caching : whenever a message is received, the md5hash of the url is evaluated
+*Caching : (1)
+           whenever a message is received, the md5hash of the url is evaluated
            and checked against the md5list local file (./cache/md5list). If the 
            md5 of the requested URL exists, then it is checked if the cached copy
            has timed out. If the url exists and not timed out, then the proxy sends
            saved cached copy instead of accessing the server
 
-        : Then it is checked if a local cached copy which has timedout exists,if yes
+          Then it is checked if a local cached copy which has timedout exists,if yes
           then it deletes it and saves a new copy after connecting with the server.
+          
+          (2)
+          Check hostname & IP
+          Extra DNS query is prevented using local storage of hostname n IP using
+          gethostname() function. Since IP is stored as char, to make it suitable 
+          for parsing in sockadd_in , function inet_pton is used. ( char -> uint32_t)
 
