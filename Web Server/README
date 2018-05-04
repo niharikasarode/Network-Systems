@@ -1,0 +1,30 @@
+-------------------------------------
+Command Line Arguments
+-------------------------------------
+
+Running the webserver linux terminal, I used
+make clean
+make
+./webserver
+
+Also running through telnet :
+Telnet commands:
+ (echo -en "GET /index.html HTTP/1.0\nHost: localhost:8006\nConnection: keep-alive\n\n"; sleep 60) | telnet 127.0.0.1 8006
+
+In this sleep = timeout.
+
+
+(echo -en "POST /index.html HTTP/1.1\nHost: localhost:8111\nContent-Length: 8\n\nPOSTDATA"; sleep 10) | telnet 127.0.1.1 8111
+
+
+-------------------------------------
+
+The webserver starts by extracting port number from wsconf file.
+It also extracts document root, default doc file and supported formats
+from the ws.conf file.
+
+Error handling supported : 
+Error 400:Bad url/version/method
+Error 404: Not found
+Error 500: Internal error
+Error 501: Not supported (file format or method)
